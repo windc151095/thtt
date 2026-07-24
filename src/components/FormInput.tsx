@@ -307,7 +307,15 @@ export function FormInput({ data, config, onChange, onPreview }: FormInputProps)
           </div>
         </div>
 
-        {/* Removed Xem trước button at the bottom */}
+        <div className="pt-8 flex justify-center">
+          <button
+            onClick={onPreview}
+            className="flex items-center gap-2 px-6 py-3 bg-[#5A5A40] text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#4A4A35] transition-colors shadow-sm"
+          >
+            <Eye className="w-4 h-4" />
+            Xem trước bài viết
+          </button>
+        </div>
       </div>
     </div>
   );

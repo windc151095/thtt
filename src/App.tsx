@@ -180,48 +180,67 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 flex overflow-hidden bg-[#F0F0E8]">
         <section className="flex-1 flex justify-center overflow-y-auto p-4 sm:p-8 custom-scrollbar">
-          {activeTab === 'fill' && (
-            <div className="w-full max-w-[600px] animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <FormInput data={formData} config={templateConfig} onChange={setFormData} onPreview={() => setActiveTab('preview')} />
-            </div>
-          )}
+          <AnimatePresence mode="wait">
+            {activeTab === 'fill' && (
+              <motion.div
+                key="fill"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="w-full max-w-[600px]"
+              >
+                <FormInput data={formData} config={templateConfig} onChange={setFormData} onPreview={() => setActiveTab('preview')} />
+              </motion.div>
+            )}
 
-          {activeTab === 'admin' && (
-            <div className="w-full max-w-[600px] animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <AdminPanel 
-                config={templateConfig} 
-                onChange={setTemplateConfig} 
-                onSave={handleSaveConfig}
-                onViewDraft={(data) => {
-                  setFormData(data);
-                  setActiveTab('fill');
-                }}
-              />
-            </div>
-          )}
+            {activeTab === 'admin' && (
+              <motion.div
+                key="admin"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="w-full max-w-[600px]"
+              >
+                <AdminPanel 
+                  config={templateConfig} 
+                  onChange={setTemplateConfig} 
+                  onSave={handleSaveConfig}
+                  onViewDraft={(data) => {
+                    setFormData(data);
+                    setActiveTab('fill');
+                  }}
+                />
+              </motion.div>
+            )}
 
-          <div
-            className={`w-full flex flex-col items-center ${
-              activeTab === 'preview' ? 'block animate-in fade-in duration-500' : 'hidden'
-            }`}
-          >
-            <div className="w-full max-w-[1020px] flex flex-wrap gap-4 justify-center sm:justify-between items-center mb-4 px-4">
-              <div className="flex gap-2 bg-[#E2E2D8] p-1 rounded-lg">
-                <button
-                  onClick={() => setActiveTab('fill')}
-                  className="relative p-2 rounded-md text-gray-500 hover:text-gray-800 transition-colors z-10"
-                  title="Nhập liệu"
-                >
-                  <PenTool className="relative z-20 w-4 h-4" />
-                </button>
-                <button
-                  className="relative p-2 rounded-md text-[#3C3633] transition-colors z-10"
-                  title="Xem trước"
-                >
-                  <motion.div layoutId="activeTabIndicator" className="absolute inset-0 bg-white shadow-sm rounded-md -z-10" />
-                  <Eye className="relative z-20 w-4 h-4" />
-                </button>
-              </div>
+            {activeTab === 'preview' && (
+              <motion.div
+                key="preview"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="w-full flex flex-col items-center"
+              >
+                <div className="w-full max-w-[1020px] flex flex-wrap gap-4 justify-center sm:justify-between items-center mb-4 px-4">
+                  <div className="flex gap-2 bg-[#E2E2D8] p-1 rounded-lg">
+                    <button
+                      onClick={() => setActiveTab('fill')}
+                      className="relative p-2 rounded-md text-gray-500 hover:text-gray-800 transition-colors z-10"
+                      title="Nhập liệu"
+                    >
+                      <PenTool className="relative z-20 w-4 h-4" />
+                    </button>
+                    <button
+                      className="relative p-2 rounded-md text-[#3C3633] transition-colors z-10"
+                      title="Xem trước"
+                    >
+                      <motion.div layoutId="activeTabIndicator" className="absolute inset-0 bg-white shadow-sm rounded-md -z-10" />
+                      <Eye className="relative z-20 w-4 h-4" />
+                    </button>
+                  </div>
 
               <div className="flex items-center gap-2 bg-white rounded-full p-1 shadow-sm">
                 <button 
@@ -269,7 +288,9 @@ export default function App() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
+          )}
+          </AnimatePresence>
         </section>
       </main>
     </div>
