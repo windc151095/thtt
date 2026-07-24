@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 import download from 'downloadjs';
 import { Settings, PenTool, Image as ImageIcon, Download, ZoomIn, ZoomOut, Eye } from 'lucide-react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from './firebase';
 
 import { defaultFormData, defaultTemplateConfig, FormData, TemplateConfig } from './types';
 import { FormInput } from './components/FormInput';
@@ -47,13 +49,16 @@ export default function App() {
   const [templateConfig, setTemplateConfig] = useState<TemplateConfig>(defaultTemplateConfig);
 
   useEffect(() => {
-    const fetchConfig = () => {
-      fetch(`/api/config?t=${Date.now()}`)
-        .then(res => res.json())
-        .then(data => {
-          setTemplateConfig(prev => ({ ...prev, ...data }));
-        })
-        .catch(console.error);
+    const fetchConfig = async () => {
+      try {
+        const configRef = doc(db, 'config', 'global');
+        const docSnap = await getDoc(configRef);
+        if (docSnap.exists()) {
+          setTemplateConfig(prev => ({ ...prev, ...docSnap.data() as Partial<TemplateConfig> }));
+        }
+      } catch (e) {
+        console.error('Lỗi khi tải cấu hình', e);
+      }
     };
 
     fetchConfig();
@@ -61,23 +66,15 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSaveConfig = () => {
-    fetch('/api/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(templateConfig)
-    })
-    .then(async (res) => {
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err);
-      }
+  const handleSaveConfig = async () => {
+    try {
+      const configRef = doc(db, 'config', 'global');
+      await setDoc(configRef, templateConfig);
       alert('Đã lưu tùy chọn cấu hình thành công cho tất cả mọi người!');
-    })
-    .catch((e) => {
+    } catch (e: any) {
       console.error(e);
       alert('Lỗi khi lưu cấu hình: ' + e.message);
-    });
+    }
   };
 
   const [isExporting, setIsExporting] = useState(false);

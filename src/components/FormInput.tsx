@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FormData, TemplateConfig } from '../types';
 import { Save, Search, PenTool, Eye } from 'lucide-react';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 interface FormInputProps {
   data: FormData;
@@ -83,7 +85,7 @@ export function FormInput({ data, config, onChange, onPreview }: FormInputProps)
   const [pin, setPin] = useState('');
   const [saveStatus, setSaveStatus] = useState('');
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (pin.length !== 4) {
       alert('Vui lòng nhập mã PIN 4 số để lưu nháp');
       return;
@@ -97,25 +99,20 @@ export function FormInput({ data, config, onChange, onPreview }: FormInputProps)
     // Lưu tạm vào localStorage như 1 bản backup
     localStorage.setItem(`draft_${pin}`, JSON.stringify(draft));
 
-    fetch('/api/drafts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(draft)
-    })
-    .then(() => {
+    try {
+      await setDoc(doc(db, 'drafts', pin), draft);
       setSaveStatus('Đã lưu nháp!');
       setTimeout(() => setSaveStatus(''), 2000);
-    })
-    .catch(() => {
+    } catch (e) {
       setSaveStatus('Lỗi khi lưu!');
       setTimeout(() => setSaveStatus(''), 2000);
-    });
+    }
   };
 
   // Auto-save effect
   useEffect(() => {
     if (pin.length === 4) {
-      const timeout = setTimeout(() => {
+      const timeout = setTimeout(async () => {
         const draft = {
           pin,
           data,
@@ -126,58 +123,56 @@ export function FormInput({ data, config, onChange, onPreview }: FormInputProps)
         localStorage.setItem(`draft_${pin}`, JSON.stringify(draft));
 
         // Sync to server
-        fetch('/api/drafts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(draft)
-        }).catch(() => {});
-
-        setSaveStatus('Đã tự động lưu nháp!');
-        setTimeout(() => setSaveStatus(''), 2000);
+        try {
+          await setDoc(doc(db, 'drafts', pin), draft);
+          setSaveStatus('Đã tự động lưu nháp!');
+          setTimeout(() => setSaveStatus(''), 2000);
+        } catch (e) {
+          // ignore
+        }
       }, 1000);
 
       return () => clearTimeout(timeout);
     }
   }, [data, pin]);
 
-  const handleLoad = () => {
+  const handleLoad = async () => {
     if (pin.length !== 4) {
       alert('Vui lòng nhập mã PIN 4 số');
       return;
     }
-    fetch(`/api/drafts/${pin}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Not found');
-        return res.json();
-      })
-      .then(draft => {
+    try {
+      const docSnap = await getDoc(doc(db, 'drafts', pin));
+      if (!docSnap.exists()) {
+        throw new Error('Not found');
+      }
+      const draft = docSnap.data();
+      const isExpired = Date.now() - draft.timestamp > 24 * 60 * 60 * 1000;
+      if (isExpired) {
+        alert('Bản nháp đã hết hạn (quá 24h).');
+        await deleteDoc(doc(db, 'drafts', pin));
+      } else {
+        onChange(draft.data);
+        alert('Đã khôi phục bài viết!');
+      }
+    } catch (e) {
+      // Fallback to localStorage
+      const saved = localStorage.getItem(`draft_${pin}`);
+      if (saved) {
+        const draft = JSON.parse(saved);
         const isExpired = Date.now() - draft.timestamp > 24 * 60 * 60 * 1000;
+        
         if (isExpired) {
           alert('Bản nháp đã hết hạn (quá 24h).');
-          fetch(`/api/drafts/${pin}`, { method: 'DELETE' });
+          localStorage.removeItem(`draft_${pin}`);
         } else {
           onChange(draft.data);
-          alert('Đã khôi phục bài viết!');
+          alert('Đã khôi phục bài viết từ máy hiện tại!');
         }
-      })
-      .catch(() => {
-        // Fallback to localStorage
-        const saved = localStorage.getItem(`draft_${pin}`);
-        if (saved) {
-          const draft = JSON.parse(saved);
-          const isExpired = Date.now() - draft.timestamp > 24 * 60 * 60 * 1000;
-          
-          if (isExpired) {
-            alert('Bản nháp đã hết hạn (quá 24h).');
-            localStorage.removeItem(`draft_${pin}`);
-          } else {
-            onChange(draft.data);
-            alert('Đã khôi phục bài viết từ máy hiện tại!');
-          }
-        } else {
-          alert('Không tìm thấy bài viết nào với mã PIN này.');
-        }
-      });
+      } else {
+        alert('Không tìm thấy bài viết nào với mã PIN này.');
+      }
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

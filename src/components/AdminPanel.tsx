@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { TemplateConfig, FormData } from '../types';
 import { Settings, Database, Trash2, Eye } from 'lucide-react';
+import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 interface AdminPanelProps {
   config: TemplateConfig;
@@ -72,7 +74,7 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
     }
   }, [isAuthenticated]);
 
-  const loadDrafts = () => {
+  const loadDrafts = async () => {
     const localDrafts = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -88,31 +90,34 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
       }
     }
     
-    fetch(`/api/drafts?t=${Date.now()}`)
-      .then(res => res.json())
-      .then(apiDrafts => {
-        // Merge API drafts and local drafts, avoiding duplicates by PIN
-        const draftMap = new Map();
-        localDrafts.forEach(d => draftMap.set(d.pin, d));
-        apiDrafts.forEach((d: any) => draftMap.set(d.pin, d));
-        
-        const allDrafts = Array.from(draftMap.values());
-        allDrafts.sort((a, b) => b.timestamp - a.timestamp);
-        setDrafts(allDrafts);
-      })
-      .catch(() => {
-        localDrafts.sort((a, b) => b.timestamp - a.timestamp);
-        setDrafts(localDrafts);
-      });
+    try {
+      const querySnapshot = await getDocs(collection(db, 'drafts'));
+      const apiDrafts = querySnapshot.docs.map(doc => doc.data());
+      
+      // Merge API drafts and local drafts, avoiding duplicates by PIN
+      const draftMap = new Map();
+      localDrafts.forEach(d => draftMap.set(d.pin, d));
+      apiDrafts.forEach((d: any) => draftMap.set(d.pin, d));
+      
+      const allDrafts = Array.from(draftMap.values());
+      allDrafts.sort((a, b) => b.timestamp - a.timestamp);
+      setDrafts(allDrafts);
+    } catch (e) {
+      localDrafts.sort((a, b) => b.timestamp - a.timestamp);
+      setDrafts(localDrafts);
+    }
   };
 
-  const handleDeleteDraft = (pin: string) => {
+  const handleDeleteDraft = async (pin: string) => {
     if (confirm(`Bạn có chắc muốn xóa bài viết có mã PIN ${pin}?`)) {
       localStorage.removeItem(`draft_${pin}`);
-      fetch(`/api/drafts/${pin}`, { method: 'DELETE' })
-        .finally(() => {
-          loadDrafts();
-        });
+      try {
+        await deleteDoc(doc(db, 'drafts', pin));
+      } catch (e) {
+        console.error('Lỗi khi xóa draft:', e);
+      } finally {
+        loadDrafts();
+      }
     }
   };
 
