@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 import download from 'downloadjs';
-import { Settings, PenTool, Image as ImageIcon, Download, ZoomIn, ZoomOut, Eye } from 'lucide-react';
+import { Settings, PenTool, Image as ImageIcon, Download, ZoomIn, ZoomOut, Eye, Home } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import { motion, AnimatePresence } from 'motion/react';
 
 import { defaultFormData, defaultTemplateConfig, FormData, TemplateConfig } from './types';
 import { FormInput } from './components/FormInput';
@@ -16,8 +17,21 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('fill');
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [previewZoom, setPreviewZoom] = useState(window.innerWidth < 1024 ? Math.max((window.innerWidth - 64) / 1000, 0.3) : 1);
+  const [previewHeight, setPreviewHeight] = useState(1000);
   const [showRestorePrompt, setShowRestorePrompt] = useState(false);
   const [draftToRestore, setDraftToRestore] = useState<FormData | null>(null);
+
+  useEffect(() => {
+    if (previewRef.current) {
+      const observer = new ResizeObserver((entries) => {
+        for (let entry of entries) {
+          setPreviewHeight(entry.contentRect.height);
+        }
+      });
+      observer.observe(previewRef.current);
+      return () => observer.disconnect();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     const autoDraft = localStorage.getItem('auto_draft');
@@ -142,6 +156,15 @@ export default function App() {
         <div className="flex items-center gap-6">
           <div className="flex gap-2 p-1 bg-[#F5F5F0] rounded-lg">
             <button
+              onClick={() => setActiveTab('fill')}
+              className={`px-3 sm:px-4 py-1.5 rounded-md text-[10px] sm:text-xs font-semibold uppercase tracking-wider flex items-center gap-2 transition-colors ${
+                activeTab === 'fill' ? 'bg-white shadow-sm text-[#3C3633]' : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              <Home className="w-3 h-3" />
+              <span className="hidden sm:inline">Trang chủ</span>
+            </button>
+            <button
               onClick={() => setActiveTab('admin')}
               className={`px-3 sm:px-4 py-1.5 rounded-md text-[10px] sm:text-xs font-semibold uppercase tracking-wider flex items-center gap-2 transition-colors ${
                 activeTab === 'admin' ? 'bg-white shadow-sm text-[#3C3633]' : 'text-gray-400 hover:text-gray-600'
@@ -182,20 +205,21 @@ export default function App() {
               activeTab === 'preview' ? 'block animate-in fade-in duration-500' : 'hidden'
             }`}
           >
-            <div className="w-full max-w-[1020px] flex justify-between items-center mb-4 px-4">
+            <div className="w-full max-w-[1020px] flex flex-wrap gap-4 justify-center sm:justify-between items-center mb-4 px-4">
               <div className="flex gap-2 bg-[#E2E2D8] p-1 rounded-lg">
                 <button
                   onClick={() => setActiveTab('fill')}
-                  className="p-2 rounded-md text-gray-500 hover:text-gray-800 hover:bg-[#D5D5CB] transition-colors"
+                  className="relative p-2 rounded-md text-gray-500 hover:text-gray-800 transition-colors z-10"
                   title="Nhập liệu"
                 >
-                  <PenTool className="w-4 h-4" />
+                  <PenTool className="relative z-20 w-4 h-4" />
                 </button>
                 <button
-                  className="p-2 rounded-md bg-white text-[#3C3633] shadow-sm transition-colors"
+                  className="relative p-2 rounded-md text-[#3C3633] transition-colors z-10"
                   title="Xem trước"
                 >
-                  <Eye className="w-4 h-4" />
+                  <motion.div layoutId="activeTabIndicator" className="absolute inset-0 bg-white shadow-sm rounded-md -z-10" />
+                  <Eye className="relative z-20 w-4 h-4" />
                 </button>
               </div>
 
@@ -225,19 +249,24 @@ export default function App() {
                   <>Đang xử lý...</>
                 ) : (
                   <>
-                    <Download className="w-4 h-4 mr-2" />
-                    Xuất ra ảnh (.png)
+                    <Download className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Xuất ra ảnh (.png)</span>
+                    <span className="sm:hidden ml-1">Xuất ảnh</span>
                   </>
                 )}
               </button>
             </div>
 
-            <div className="w-full flex justify-center custom-scrollbar">
-              <div 
-                className="origin-top flex justify-center w-[1000px] shrink-0 bg-white shadow-2xl relative transition-transform duration-200"
-                style={{ transform: `scale(${previewZoom})` }}
-              >
-                <TemplatePreview ref={previewRef} data={formData} config={templateConfig} />
+            <div className="w-full overflow-auto custom-scrollbar pb-24">
+              <div className="w-fit min-w-full flex justify-center px-4">
+                <div style={{ width: `${1000 * previewZoom}px`, height: `${previewHeight * previewZoom}px`, transition: 'width 0.2s, height 0.2s' }} className="shrink-0 relative">
+                  <div 
+                    className="origin-top-left w-[1000px] bg-white shadow-2xl transition-transform duration-200"
+                    style={{ transform: `scale(${previewZoom})` }}
+                  >
+                    <TemplatePreview ref={previewRef} data={formData} config={templateConfig} />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

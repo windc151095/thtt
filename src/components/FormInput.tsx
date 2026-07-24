@@ -3,6 +3,7 @@ import { FormData, TemplateConfig } from '../types';
 import { Save, Search, PenTool, Eye } from 'lucide-react';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { motion } from 'motion/react';
 
 interface FormInputProps {
   data: FormData;
@@ -182,7 +183,7 @@ export function FormInput({ data, config, onChange, onPreview }: FormInputProps)
 
   return (
     <div className="bg-white rounded-2xl shadow-xl shadow-black/5 flex flex-col border border-white/50 w-full mb-12">
-      <div className="p-6 bg-[#5A5A40] text-white shrink-0 rounded-t-2xl relative overflow-hidden flex justify-between items-start">
+      <div className="p-4 sm:p-6 bg-[#5A5A40] text-white shrink-0 rounded-t-2xl relative overflow-hidden flex justify-between items-start">
         <div>
           <div className="absolute top-0 right-0 p-8 opacity-10">
             <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor">
@@ -194,36 +195,37 @@ export function FormInput({ data, config, onChange, onPreview }: FormInputProps)
         </div>
         <div className="flex gap-2 bg-[#4A4A35] p-1 rounded-lg relative z-10">
           <button
-            className="p-2 rounded-md bg-white text-[#3C3633] shadow-sm transition-colors"
+            className="relative p-2 rounded-md text-[#3C3633] transition-colors z-10"
             title="Nhập liệu"
           >
-            <PenTool className="w-4 h-4" />
+            <motion.div layoutId="activeTabIndicator" className="absolute inset-0 bg-white shadow-sm rounded-md -z-10" />
+            <PenTool className="relative z-20 w-4 h-4" />
           </button>
           <button
             onClick={onPreview}
-            className="p-2 rounded-md text-gray-300 hover:text-white hover:bg-[#3A3A25] transition-colors"
+            className="relative p-2 rounded-md text-gray-300 hover:text-white transition-colors z-10"
             title="Xem trước"
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="relative z-20 w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Auto Save/Load Section */}
-      <div className="px-8 pt-6 pb-2 border-b border-[#F5F5F0]">
+      <div className="px-4 sm:px-8 pt-6 pb-2 border-b border-[#F5F5F0]">
         <div className="flex flex-col sm:flex-row items-center gap-4 bg-[#F9F9F7] p-3 rounded-lg border border-[#E2E2D8]">
           <div className="flex items-center gap-2">
             <Save className="w-4 h-4 text-[#7A8471]" />
             <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">Lưu / Tìm lại bài viết</span>
           </div>
-          <div className="flex-1 flex items-center justify-end gap-2">
+          <div className="flex-1 flex flex-wrap justify-center sm:justify-end items-center gap-2">
             <input
               type="text"
               maxLength={4}
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-              placeholder="Mã PIN 4 số"
-              className="w-24 text-center p-1.5 text-xs font-mono border border-[#E2E2D8] rounded focus:border-[#7A8471] outline-none"
+              placeholder="Mã PIN"
+              className="w-20 text-center p-1.5 text-xs font-mono border border-[#E2E2D8] rounded focus:border-[#7A8471] outline-none"
             />
             <button
               onClick={handleSave}
@@ -251,7 +253,7 @@ export function FormInput({ data, config, onChange, onPreview }: FormInputProps)
         </p>
       </div>
 
-      <div className="p-8 space-y-8">
+      <div className="p-4 sm:p-8 space-y-6 sm:space-y-8">
         {/* Thông tin chung */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <InputField label="Ngày" name="date" placeholder="DD/MM/YYYY" value={data.date} onChange={handleChange} />
