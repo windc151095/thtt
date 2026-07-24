@@ -21,17 +21,20 @@ export default function App() {
   const [showRestorePrompt, setShowRestorePrompt] = useState(false);
   const [draftToRestore, setDraftToRestore] = useState<FormData | null>(null);
 
+  const [templateConfig, setTemplateConfig] = useState<TemplateConfig>(defaultTemplateConfig);
+  const previewRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (previewRef.current) {
       const observer = new ResizeObserver((entries) => {
         for (let entry of entries) {
-          setPreviewHeight(entry.contentRect.height);
+          setPreviewHeight((entry.target as HTMLElement).offsetHeight);
         }
       });
       observer.observe(previewRef.current);
       return () => observer.disconnect();
     }
-  }, [activeTab]);
+  }, [activeTab, formData, templateConfig]);
 
   useEffect(() => {
     const autoDraft = localStorage.getItem('auto_draft');
@@ -59,8 +62,6 @@ export default function App() {
       }));
     }
   }, [formData]);
-
-  const [templateConfig, setTemplateConfig] = useState<TemplateConfig>(defaultTemplateConfig);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -92,8 +93,6 @@ export default function App() {
   };
 
   const [isExporting, setIsExporting] = useState(false);
-
-  const previewRef = useRef<HTMLDivElement>(null);
 
   const handleExport = useCallback(() => {
     if (previewRef.current === null) {
@@ -184,10 +183,10 @@ export default function App() {
             {activeTab === 'fill' && (
               <motion.div
                 key="fill"
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
+                exit={{ opacity: 0, y: -5 }}
+                transition={{ duration: 0.4, ease: 'easeInOut' }}
                 className="w-full max-w-[600px]"
               >
                 <FormInput data={formData} config={templateConfig} onChange={setFormData} onPreview={() => setActiveTab('preview')} />
@@ -197,10 +196,10 @@ export default function App() {
             {activeTab === 'admin' && (
               <motion.div
                 key="admin"
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
+                exit={{ opacity: 0, y: -5 }}
+                transition={{ duration: 0.4, ease: 'easeInOut' }}
                 className="w-full max-w-[600px]"
               >
                 <AdminPanel 
@@ -209,7 +208,7 @@ export default function App() {
                   onSave={handleSaveConfig}
                   onViewDraft={(data) => {
                     setFormData(data);
-                    setActiveTab('fill');
+                    setActiveTab('preview');
                   }}
                 />
               </motion.div>
@@ -218,10 +217,10 @@ export default function App() {
             {activeTab === 'preview' && (
               <motion.div
                 key="preview"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                transition={{ duration: 0.4, ease: 'easeInOut' }}
                 className="w-full flex flex-col items-center"
               >
                 <div className="w-full max-w-[1020px] flex flex-wrap gap-4 justify-center sm:justify-between items-center mb-4 px-4">

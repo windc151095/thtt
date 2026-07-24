@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FormData, TemplateConfig } from '../types';
+import { FormData, TemplateConfig, defaultFormData } from '../types';
 import { Save, Search, PenTool, Eye } from 'lucide-react';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -114,6 +114,9 @@ export function FormInput({ data, config, onChange, onPreview }: FormInputProps)
   useEffect(() => {
     if (pin.length === 4) {
       const timeout = setTimeout(async () => {
+        // Skip if data is exactly default (empty form)
+        if (JSON.stringify(data) === JSON.stringify(defaultFormData)) return;
+
         const draft = {
           pin,
           data,
@@ -135,7 +138,8 @@ export function FormInput({ data, config, onChange, onPreview }: FormInputProps)
 
       return () => clearTimeout(timeout);
     }
-  }, [data, pin]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   const handleLoad = async () => {
     if (pin.length !== 4) {
