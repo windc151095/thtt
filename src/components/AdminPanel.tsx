@@ -18,7 +18,11 @@ interface ColorInputProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const ColorInput = ({ label, name, value, onChange }: ColorInputProps) => (
+const ColorInput = ({ label, name, value, onChange }: ColorInputProps) => {
+  // Ensure valid hex format for type="color" input
+  const validHexValue = /^#[0-9A-Fa-f]{6}$/.test(value || '') ? value : '#000000';
+  
+  return (
   <div className="flex items-center justify-between py-3 border-b border-[#F5F5F0] last:border-0">
     <label className="text-[11px] font-medium text-gray-600 uppercase tracking-wide">{label}</label>
     <div className="flex items-center gap-3">
@@ -34,14 +38,14 @@ const ColorInput = ({ label, name, value, onChange }: ColorInputProps) => (
         <input
           type="color"
           name={name}
-          value={value}
+          value={validHexValue}
           onChange={onChange}
           className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer"
         />
       </div>
     </div>
   </div>
-);
+)};
 
 const CONFIGURABLE_FIELDS = [
   { key: 'tinhHuong', label: 'Tình huống' },
@@ -371,19 +375,19 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
           <div>
             <h3 className="text-[10px] font-black text-[#9A8C73] uppercase tracking-widest mb-4">Màu sắc văn bản</h3>
             <div className="pl-4 border-l border-[#E2E2D8] ml-2">
-              <ColorInput label="Màu chữ nội dung" name="textColor" value={String(config.textColor)} onChange={handleChange} />
-              <ColorInput label="Màu Tiêu đề chính" name="headingColor1" value={String(config.headingColor1)} onChange={handleChange} />
-              <ColorInput label="Màu Tiêu đề phụ" name="headingColor2" value={String(config.headingColor2)} onChange={handleChange} />
+              <ColorInput label="Màu chữ nội dung" name="textColor" value={config.textColor || ''} onChange={handleChange} />
+              <ColorInput label="Màu Tiêu đề chính" name="headingColor1" value={config.headingColor1 || ''} onChange={handleChange} />
+              <ColorInput label="Màu Tiêu đề phụ" name="headingColor2" value={config.headingColor2 || ''} onChange={handleChange} />
             </div>
           </div>
 
           <div>
             <h3 className="text-[10px] font-black text-[#5A5A40] uppercase tracking-widest mb-4">Màu nền & Màu khung</h3>
             <div className="pl-4 border-l border-[#E2E2D8] ml-2">
-              <ColorInput label="Màu nền" name="backgroundColor" value={String(config.backgroundColor)} onChange={handleChange} />
-              <ColorInput label="Viền cột trái" name="borderColor1" value={String(config.borderColor1)} onChange={handleChange} />
-              <ColorInput label="Viền cột phải" name="borderColor2" value={String(config.borderColor2)} onChange={handleChange} />
-              <ColorInput label="Viền bảng dưới" name="borderColor3" value={String(config.borderColor3)} onChange={handleChange} />
+              <ColorInput label="Màu nền" name="backgroundColor" value={config.backgroundColor || ''} onChange={handleChange} />
+              <ColorInput label="Viền cột trái" name="borderColor1" value={config.borderColor1 || ''} onChange={handleChange} />
+              <ColorInput label="Viền cột phải" name="borderColor2" value={config.borderColor2 || ''} onChange={handleChange} />
+              <ColorInput label="Viền bảng dưới" name="borderColor3" value={config.borderColor3 || ''} onChange={handleChange} />
             </div>
           </div>
           

@@ -19,7 +19,7 @@ service cloud.firestore {
     }
 
     function isValidConfig(data) {
-      let hasRequired = data.keys().hasAll(['fontSize', 'textColor', 'fontFamily', 'headingColor1', 'headingColor2', 'borderColor1', 'borderColor2', 'borderColor3', 'backgroundColor', 'fieldsConfig']);
+      let hasRequired = data.keys().hasAny(['fontSize', 'textColor', 'fontFamily', 'headingColor1', 'headingColor2', 'borderColor1', 'borderColor2', 'borderColor3', 'backgroundColor']);
       let hasValidTypes = data.fontSize is number &&
              data.textColor is string && data.textColor.size() <= 100 &&
              data.fontFamily is string && data.fontFamily.size() <= 200 &&
@@ -28,13 +28,12 @@ service cloud.firestore {
              data.borderColor1 is string && data.borderColor1.size() <= 100 &&
              data.borderColor2 is string && data.borderColor2.size() <= 100 &&
              data.borderColor3 is string && data.borderColor3.size() <= 100 &&
-             data.backgroundColor is string && data.backgroundColor.size() <= 100 &&
-             data.fieldsConfig is map;
+             data.backgroundColor is string && data.backgroundColor.size() <= 100;
              
-      let hasValidOptional = (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 1000000));
-      // allow logoUrl to be up to 1MB since it's a base64 data URI
-
-      return hasRequired && hasValidTypes && hasValidOptional && (data.keys().size() == 10 || (data.keys().size() == 11 && 'logoUrl' in data));
+      let hasValidOptional = (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 1000000)) &&
+                             (!('fieldsConfig' in data) || data.fieldsConfig is map);
+      
+      return hasRequired && hasValidTypes && hasValidOptional;
     }
 
     function isValidDraft(data) {

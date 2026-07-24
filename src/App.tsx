@@ -102,7 +102,14 @@ export default function App() {
     
     // Slight delay to ensure React has fully rendered any state changes before snapshot
     setTimeout(() => {
-      toPng(previewRef.current!, { cacheBust: true, pixelRatio: 2 })
+      toPng(previewRef.current!, { 
+        cacheBust: true, 
+        pixelRatio: 2,
+        backgroundColor: templateConfig.backgroundColor || '#ffffff',
+        style: {
+          margin: '0',
+        }
+      })
         .then((dataUrl) => {
           download(dataUrl, `TamThuc_${formData.date.replace(/\//g, '-')}.png`);
           setIsExporting(false);
