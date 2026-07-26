@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 import download from 'downloadjs';
-import { Settings, PenTool, Image as ImageIcon, Download, ZoomIn, ZoomOut, Eye, Home } from 'lucide-react';
+import { Settings, PenTool, Image as ImageIcon, Download, ZoomIn, ZoomOut, Eye, Home, HelpCircle, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { motion, AnimatePresence } from 'motion/react';
@@ -20,6 +20,7 @@ export default function App() {
   const [previewHeight, setPreviewHeight] = useState(1000);
   const [showRestorePrompt, setShowRestorePrompt] = useState(false);
   const [draftToRestore, setDraftToRestore] = useState<FormData | null>(null);
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
 
   const [templateConfig, setTemplateConfig] = useState<TemplateConfig>(defaultTemplateConfig);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -213,7 +214,13 @@ export default function App() {
                 transition={{ duration: 0.4, ease: 'easeInOut' }}
                 className="w-full max-w-[600px]"
               >
-                <FormInput data={formData} config={templateConfig} onChange={setFormData} onPreview={() => setActiveTab('preview')} />
+                <FormInput 
+                  data={formData} 
+                  config={templateConfig} 
+                  onChange={setFormData} 
+                  onPreview={() => setActiveTab('preview')} 
+                  onHelp={() => setIsGuideModalOpen(true)}
+                />
               </motion.div>
             )}
 
@@ -263,6 +270,15 @@ export default function App() {
                       <motion.div layoutId="activeTabIndicator" className="absolute inset-0 bg-white shadow-sm rounded-md -z-10" />
                       <Eye className="relative z-20 w-4 h-4" />
                     </button>
+                    {templateConfig.guideImageUrl && (
+                      <button
+                        onClick={() => setIsGuideModalOpen(true)}
+                        className="relative p-2 rounded-md text-gray-500 hover:text-gray-800 transition-colors z-10"
+                        title="Hướng dẫn"
+                      >
+                        <HelpCircle className="relative z-20 w-4 h-4" />
+                      </button>
+                    )}
                   </div>
 
               <div className="flex items-center gap-2 bg-white rounded-full p-1 shadow-sm">
@@ -320,6 +336,40 @@ export default function App() {
           </AnimatePresence>
         </section>
       </main>
+
+      {/* Guide Modal */}
+      <AnimatePresence>
+        {isGuideModalOpen && templateConfig.guideImageUrl && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 sm:p-8 cursor-pointer" 
+            onClick={() => setIsGuideModalOpen(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ type: "spring", duration: 0.5, bounce: 0 }}
+              className="relative max-w-5xl w-full h-full flex flex-col items-center justify-center pointer-events-none"
+            >
+              <button 
+                onClick={(e) => { e.stopPropagation(); setIsGuideModalOpen(false); }}
+                className="absolute top-4 right-4 sm:top-0 sm:-right-12 p-2 text-white/70 hover:text-white bg-black/50 hover:bg-black/80 rounded-full transition-colors pointer-events-auto"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <img 
+                src={templateConfig.guideImageUrl} 
+                alt="Hướng dẫn" 
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl pointer-events-auto cursor-default"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

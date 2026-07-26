@@ -14,6 +14,7 @@ export interface TemplateConfig {
   borderColor3: string;
   backgroundColor: string;
   logoUrl?: string;
+  guideImageUrl?: string;
   fieldsConfig?: Record<string, FieldConfig>;
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FormData, TemplateConfig, defaultFormData } from '../types';
-import { Save, Search, PenTool, Eye } from 'lucide-react';
+import { Save, Search, PenTool, Eye, HelpCircle } from 'lucide-react';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { motion } from 'motion/react';
@@ -10,6 +10,7 @@ interface FormInputProps {
   config: TemplateConfig;
   onChange: (data: FormData) => void;
   onPreview?: () => void;
+  onHelp?: () => void;
 }
 
 interface InputFieldProps {
@@ -82,7 +83,7 @@ const TextAreaField = ({ label, name, rows = 3, placeholder, value, config, onCh
   );
 };
 
-export function FormInput({ data, config, onChange, onPreview }: FormInputProps) {
+export function FormInput({ data, config, onChange, onPreview, onHelp }: FormInputProps) {
   const [pin, setPin] = useState('');
   const [saveStatus, setSaveStatus] = useState('');
 
@@ -212,6 +213,15 @@ export function FormInput({ data, config, onChange, onPreview }: FormInputProps)
           >
             <Eye className="relative z-20 w-4 h-4" />
           </button>
+          {config.guideImageUrl && (
+            <button
+              onClick={onHelp}
+              className="relative p-2 rounded-md text-gray-300 hover:text-white transition-colors z-10"
+              title="Hướng dẫn"
+            >
+              <HelpCircle className="relative z-20 w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

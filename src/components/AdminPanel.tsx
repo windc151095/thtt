@@ -353,6 +353,76 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
           </div>
 
           <div>
+            <h3 className="text-[10px] font-black text-[#5A5A40] uppercase tracking-widest mb-4">Hình ảnh Hướng dẫn</h3>
+            
+            <div className="space-y-4 pl-4 border-l border-[#E2E2D8] ml-2">
+              <div className="flex gap-4 items-start">
+                {config.guideImageUrl && (
+                  <img src={config.guideImageUrl} alt="Guide preview" className="w-16 h-16 object-contain rounded border border-[#E2E2D8] bg-[#F9F9F7]" />
+                )}
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Tải ảnh lên (Khuyên dùng PNG)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            const img = new window.Image();
+                            img.onload = () => {
+                              const canvas = document.createElement('canvas');
+                              const MAX_WIDTH = 2048;
+                              const MAX_HEIGHT = 2048;
+                              let width = img.width;
+                              let height = img.height;
+
+                              if (width > height) {
+                                if (width > MAX_WIDTH) {
+                                  height *= MAX_WIDTH / width;
+                                  width = MAX_WIDTH;
+                                }
+                              } else {
+                                if (height > MAX_HEIGHT) {
+                                  width *= MAX_HEIGHT / height;
+                                  height = MAX_HEIGHT;
+                                }
+                              }
+                              canvas.width = width;
+                              canvas.height = height;
+                              const ctx = canvas.getContext('2d');
+                              ctx?.clearRect(0, 0, width, height);
+                              ctx?.drawImage(img, 0, 0, width, height);
+                              const dataUrl = canvas.toDataURL('image/png');
+                              onChange({ ...config, guideImageUrl: dataUrl });
+                            };
+                            img.src = reader.result as string;
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-wider file:bg-[#F5F5F0] file:text-[#5A5A40] hover:file:bg-[#E2E2D8] transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Hoặc dán URL Ảnh</label>
+                    <input
+                      type="text"
+                      name="guideImageUrl"
+                      value={config.guideImageUrl || ''}
+                      onChange={handleChange}
+                      placeholder="https://example.com/guide.png"
+                      className="w-full p-2 border border-[#E2E2D8] rounded bg-[#F9F9F7] text-xs text-[#3C3633] focus:border-[#7A8471] outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
             <h3 className="text-[10px] font-black text-[#7A8471] uppercase tracking-widest mb-4">Kiểu chữ & Kích thước</h3>
             
             <div className="space-y-4 pl-4 border-l border-[#E2E2D8] ml-2">
