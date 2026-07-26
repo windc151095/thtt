@@ -100,27 +100,36 @@ export default function App() {
     }
     setIsExporting(true);
     
-    // Slight delay to ensure React has fully rendered any state changes before snapshot
-    setTimeout(() => {
-      toPng(previewRef.current!, { 
-        cacheBust: true, 
-        pixelRatio: 2,
-        backgroundColor: templateConfig.backgroundColor || '#ffffff',
-        style: {
-          margin: '0',
+    // Delay to ensure React layout & custom fonts are ready before snapshot
+    setTimeout(async () => {
+      try {
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
         }
-      })
-        .then((dataUrl) => {
-          download(dataUrl, `TamThuc_${formData.date.replace(/\//g, '-')}.png`);
-          setIsExporting(false);
-        })
-        .catch((err) => {
-          console.error('Error exporting image', err);
-          alert('Có lỗi xảy ra khi xuất ảnh.');
-          setIsExporting(false);
-        });
-    }, 100);
-  }, [previewRef, formData.date]);
+
+        const exportOptions = {
+          cacheBust: true,
+          pixelRatio: 2,
+          backgroundColor: templateConfig.backgroundColor || '#ffffff',
+          style: {
+            margin: '0',
+          },
+        };
+
+        // Warm up html-to-image font embedding engine
+        await toPng(previewRef.current!, exportOptions);
+
+        // Capture actual crisp PNG snapshot
+        const dataUrl = await toPng(previewRef.current!, exportOptions);
+        download(dataUrl, `TamThuc_${formData.date.replace(/\//g, '-')}.png`);
+      } catch (err) {
+        console.error('Error exporting image', err);
+        alert('Có lỗi xảy ra khi xuất ảnh.');
+      } finally {
+        setIsExporting(false);
+      }
+    }, 150);
+  }, [previewRef, formData.date, templateConfig.backgroundColor]);
 
   return (
     <div className="min-h-screen bg-[#F5F5F0] text-[#3C3633] font-sans flex flex-col">
