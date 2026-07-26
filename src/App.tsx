@@ -25,6 +25,14 @@ export default function App() {
   const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Scroll to top immediately when tab changes, avoiding smooth scroll which can glitch during layout shifts
+    const el = document.getElementById('main-scroll-section');
+    if (el) {
+      el.scrollTop = 0;
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
     if (previewRef.current) {
       const observer = new ResizeObserver((entries) => {
         for (let entry of entries) {
@@ -194,7 +202,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex overflow-hidden bg-[#F0F0E8]">
-        <section className="flex-1 flex justify-center overflow-y-auto p-4 sm:p-8 custom-scrollbar">
+        <section id="main-scroll-section" className="flex-1 flex justify-center overflow-y-auto p-4 sm:p-8 custom-scrollbar">
           <AnimatePresence mode="wait">
             {activeTab === 'fill' && (
               <motion.div
@@ -291,15 +299,19 @@ export default function App() {
               </button>
             </div>
 
-            <div className="w-full overflow-auto custom-scrollbar pb-24">
-              <div className="w-fit min-w-full flex justify-center px-4">
-                <div style={{ width: `${1000 * previewZoom}px`, height: `${previewHeight * previewZoom}px`, transition: 'width 0.2s, height 0.2s' }} className="shrink-0 relative">
-                  <div 
-                    className="origin-top-left w-[1000px] bg-white shadow-2xl transition-transform duration-200"
-                    style={{ transform: `scale(${previewZoom})` }}
-                  >
-                    <TemplatePreview ref={previewRef} data={formData} config={templateConfig} />
-                  </div>
+            <div className="w-full overflow-auto custom-scrollbar pb-24 pt-8 flex justify-center items-start">
+              <div 
+                className="relative shrink-0 transition-all duration-200"
+                style={{ 
+                  width: `${1000 * previewZoom}px`, 
+                  height: `${previewHeight * previewZoom}px` 
+                }}
+              >
+                <div 
+                  className="absolute top-0 left-0 origin-top-left w-[1000px] shadow-2xl transition-transform duration-200"
+                  style={{ transform: `scale(${previewZoom})` }}
+                >
+                  <TemplatePreview ref={previewRef} data={formData} config={templateConfig} />
                 </div>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TemplateConfig, FormData } from '../types';
-import { Settings, Database, Trash2, Eye } from 'lucide-react';
+import { Settings, Database, Trash2, Eye, LogOut } from 'lucide-react';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -63,7 +63,9 @@ const CONFIGURABLE_FIELDS = [
 ];
 
 export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanelProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('isAdminAuthenticated') === 'true';
+  });
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -129,6 +131,7 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
     e.preventDefault();
     if (username === 'admin' && password === 'ssstamthuc') {
       setIsAuthenticated(true);
+      localStorage.setItem('isAdminAuthenticated', 'true');
       setError('');
     } else {
       setError('Sai tên đăng nhập hoặc mật khẩu!');
@@ -150,6 +153,11 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
       options: optionsStr.split('\n').map(s => s.trim()).filter(Boolean)
     };
     onChange({ ...config, fieldsConfig: newFieldsConfig });
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('isAdminAuthenticated');
   };
 
   if (!isAuthenticated) {
@@ -221,6 +229,13 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
         >
           <Settings className="w-4 h-4" />
           Cấu hình trường nhập
+        </button>
+        <button
+          onClick={handleLogout}
+          className="px-6 py-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors border-l border-[#E2E2D8]"
+          title="Đăng xuất"
+        >
+          <LogOut className="w-4 h-4" />
         </button>
       </div>
 

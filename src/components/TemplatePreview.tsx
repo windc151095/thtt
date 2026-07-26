@@ -25,8 +25,10 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
         className="w-[1000px] flex flex-col gap-6 relative pb-12"
         style={{ fontFamily, fontSize: `${fontSize}px`, color: textColor, backgroundColor: config.backgroundColor || '#ffffff' }}
       >
+        {/* Header Spacer */}
+        <div style={{ height: '48px', width: '100%', flexShrink: 0 }}></div>
         {/* Header */}
-        <div className="flex justify-between items-start pt-8 px-8 border-b-[1px] pb-6" style={{ borderColor: headingColor1 }}>
+        <div className="flex justify-between items-start px-8 border-b-[1px] pb-6" style={{ borderColor: headingColor1 }}>
           {/* Logo Area */}
           <div className="w-[280px] text-center mt-2 flex flex-col items-center shrink-0">
             {config.logoUrl ? (
