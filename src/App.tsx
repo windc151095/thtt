@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 import download from 'downloadjs';
-import { Settings, PenTool, Image as ImageIcon, Download, ZoomIn, ZoomOut, Eye, Home, HelpCircle, X } from 'lucide-react';
+import { Settings, PenTool, Image as ImageIcon, Download, ZoomIn, ZoomOut, Eye, Home, HelpCircle, X, Save } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { motion, AnimatePresence } from 'motion/react';
@@ -18,8 +18,7 @@ export default function App() {
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [previewZoom, setPreviewZoom] = useState(window.innerWidth < 1024 ? Math.max((window.innerWidth - 64) / 1000, 0.3) : 1);
   const [previewHeight, setPreviewHeight] = useState(1000);
-  const [showRestorePrompt, setShowRestorePrompt] = useState(false);
-  const [draftToRestore, setDraftToRestore] = useState<FormData | null>(null);
+  const [showPinInfoPrompt, setShowPinInfoPrompt] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
 
   const [templateConfig, setTemplateConfig] = useState<TemplateConfig>(defaultTemplateConfig);
@@ -46,31 +45,11 @@ export default function App() {
   }, [activeTab, formData, templateConfig]);
 
   useEffect(() => {
-    const autoDraft = localStorage.getItem('auto_draft');
-    if (autoDraft) {
-      try {
-        const parsed = JSON.parse(autoDraft);
-        // Only restore if it's less than 24h old and not deeply equal to default
-        if (parsed.timestamp && Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000 && parsed.data) {
-          if (JSON.stringify(parsed.data) !== JSON.stringify(defaultFormData)) {
-             setDraftToRestore(parsed.data);
-             setShowRestorePrompt(true);
-          }
-        }
-      } catch (e) {
-        console.error('Lỗi khi đọc auto_draft', e);
-      }
+    const hasSeen = sessionStorage.getItem('has_seen_pin_prompt');
+    if (!hasSeen) {
+      setShowPinInfoPrompt(true);
     }
   }, []);
-
-  useEffect(() => {
-    if (formData !== defaultFormData) {
-      localStorage.setItem('auto_draft', JSON.stringify({
-        data: formData,
-        timestamp: Date.now()
-      }));
-    }
-  }, [formData]);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -142,35 +121,67 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F0] text-[#3C3633] font-sans flex flex-col">
-      {showRestorePrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-sm w-full shadow-2xl">
-            <h3 className="font-serif italic text-xl text-[#5A5A40] mb-2">Khôi phục bài viết?</h3>
-            <p className="text-sm text-gray-600 mb-6">Bạn có một bài viết đang soạn dở. Bạn có muốn khôi phục lại không?</p>
-            <div className="flex gap-3 justify-end">
-              <button
+      <AnimatePresence>
+        {showPinInfoPrompt && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ type: "spring", duration: 0.5, bounce: 0 }}
+              className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative"
+            >
+              <button 
                 onClick={() => {
-                  setShowRestorePrompt(false);
-                  setDraftToRestore(null);
-                  localStorage.removeItem('auto_draft');
+                  setShowPinInfoPrompt(false);
+                  sessionStorage.setItem('has_seen_pin_prompt', 'true');
                 }}
-                className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 transition-colors"
               >
-                Bỏ qua
+                <X className="w-5 h-5" />
               </button>
-              <button
-                onClick={() => {
-                  if (draftToRestore) setFormData(draftToRestore);
-                  setShowRestorePrompt(false);
-                }}
-                className="px-4 py-2 bg-[#7A8471] text-white text-xs font-bold uppercase tracking-wider rounded shadow-sm hover:bg-[#606958] transition-colors"
-              >
-                Khôi phục
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-[#7A8471]/10 rounded-full flex items-center justify-center text-[#7A8471]">
+                  <Save className="w-5 h-5" />
+                </div>
+                <h3 className="font-serif italic text-2xl text-[#5A5A40]">Lưu Nháp Bằng Mã PIN</h3>
+              </div>
+              
+              <div className="space-y-4 text-sm text-gray-600 leading-relaxed">
+                <p>
+                  Nếu chưa thể hoàn thành bài viết ngay, hãy <strong className="text-[#3C3633]">tạo mã PIN</strong> và <strong className="text-[#3C3633]">Lưu nháp</strong>.
+                </p>
+                <p>
+                  Trong vòng 24 giờ, bạn chỉ cần nhập lại mã PIN này để mở lại bài viết và tiếp tục chỉnh sửa mà không cần nhập lại từ đầu.
+                </p>
+                <div className="bg-[#F5F5F0] p-4 rounded-lg border border-[#E2E2D8]">
+                  <p className="text-xs text-[#5A5A40]">
+                    <strong>Lưu ý:</strong> Vui lòng tránh sử dụng các mã PIN quá đơn giản (như 1234, 0000) và <strong>ghi nhớ mã PIN</strong> để sử dụng khi cần khôi phục bài viết.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mt-8 flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowPinInfoPrompt(false);
+                    sessionStorage.setItem('has_seen_pin_prompt', 'true');
+                  }}
+                  className="px-6 py-2.5 bg-[#7A8471] text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow-sm hover:bg-[#606958] transition-colors w-full sm:w-auto"
+                >
+                  Đã Hiểu
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Navigation */}
       <header className="h-16 bg-white border-b border-[#E2E2D8] flex items-center justify-between px-4 sm:px-8 shrink-0">
         <div className="flex items-center gap-3">
