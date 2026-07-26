@@ -37,7 +37,7 @@ export interface FormData {
 export const defaultTemplateConfig: TemplateConfig = {
   fontSize: 12,
   textColor: '#4b5563', 
-  fontFamily: "'Be Vietnam Pro', 'Inter', sans-serif",
+  fontFamily: "'Google Sans', 'Be Vietnam Pro', 'Inter', sans-serif",
   headingColor1: '#1e40af', // Blue
   headingColor2: '#ef4444', // Red
   borderColor1: '#1e40af',

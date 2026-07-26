@@ -379,6 +379,7 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
                   onChange={handleChange}
                   className="w-full p-2 border border-[#E2E2D8] rounded bg-[#F9F9F7] text-xs text-[#3C3633] focus:border-[#7A8471] outline-none transition-colors"
                 >
+                  <option value="'Google Sans', 'Be Vietnam Pro', 'Inter', sans-serif">Google Sans</option>
                   <option value="'Be Vietnam Pro', 'Inter', sans-serif">Be Vietnam Pro (Sans-serif)</option>
                   <option value="'Inter', sans-serif">Inter (Sans-serif)</option>
                   <option value="'Cormorant Garamond', serif">Cormorant Garamond (Serif)</option>
