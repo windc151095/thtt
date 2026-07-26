@@ -20,6 +20,7 @@ export default function App() {
   const [previewHeight, setPreviewHeight] = useState(1000);
   const [showPinInfoPrompt, setShowPinInfoPrompt] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
+  const [previewBgIndex, setPreviewBgIndex] = useState(0);
 
   const [templateConfig, setTemplateConfig] = useState<TemplateConfig>(defaultTemplateConfig);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -265,66 +266,108 @@ export default function App() {
                 transition={{ duration: 0.4, ease: 'easeInOut' }}
                 className="w-full flex flex-col items-center"
               >
-                <div className="w-full max-w-[1020px] flex flex-wrap gap-4 justify-center sm:justify-between items-center mb-4 px-4">
-                  <div className="flex gap-2 bg-[#E2E2D8] p-1 rounded-lg">
-                    <button
-                      onClick={() => setActiveTab('fill')}
-                      className="relative p-2 rounded-md text-gray-500 hover:text-gray-800 transition-colors z-10"
-                      title="Nhập liệu"
-                    >
-                      <PenTool className="relative z-20 w-4 h-4" />
-                    </button>
-                    <button
-                      className="relative p-2 rounded-md text-[#3C3633] transition-colors z-10"
-                      title="Xem trước"
-                    >
-                      <motion.div layoutId="activeTabIndicator" className="absolute inset-0 bg-white shadow-sm rounded-md -z-10" />
-                      <Eye className="relative z-20 w-4 h-4" />
-                    </button>
-                    {templateConfig.guideImageUrl && (
+                <div className="w-full max-w-[1020px] flex flex-col lg:flex-row gap-3 mb-4 px-2 sm:px-4 lg:justify-between lg:items-center">
+                  <div className="flex items-center justify-between lg:justify-start w-full lg:w-auto gap-2 sm:gap-4">
+                    <div className="flex gap-1 sm:gap-2 bg-[#E2E2D8] p-1 rounded-lg shrink-0">
                       <button
-                        onClick={() => setIsGuideModalOpen(true)}
-                        className="relative p-2 rounded-md text-gray-500 hover:text-gray-800 transition-colors z-10"
-                        title="Hướng dẫn"
+                        onClick={() => setActiveTab('fill')}
+                        className="relative p-1.5 sm:p-2 rounded-md text-gray-500 hover:text-gray-800 transition-colors z-10"
+                        title="Nhập liệu"
                       >
-                        <HelpCircle className="relative z-20 w-4 h-4" />
+                        <PenTool className="relative z-20 w-4 h-4" />
                       </button>
-                    )}
+                      <button
+                        className="relative p-1.5 sm:p-2 rounded-md text-[#3C3633] transition-colors z-10"
+                        title="Xem trước"
+                      >
+                        <motion.div layoutId="activeTabIndicator" className="absolute inset-0 bg-white shadow-sm rounded-md -z-10" />
+                        <Eye className="relative z-20 w-4 h-4" />
+                      </button>
+                      {templateConfig.guideImageUrl && (
+                        <button
+                          onClick={() => setIsGuideModalOpen(true)}
+                          className="relative p-1.5 sm:p-2 rounded-md text-gray-500 hover:text-gray-800 transition-colors z-10"
+                          title="Hướng dẫn"
+                        >
+                          <HelpCircle className="relative z-20 w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 sm:gap-2 bg-white rounded-full p-1 shadow-sm shrink-0">
+                      <button 
+                        onClick={() => setPreviewZoom(z => Math.max(0.3, z - 0.1))}
+                        className="p-1 sm:p-1.5 text-gray-500 hover:text-[#5A5A40] hover:bg-gray-100 rounded-full transition-colors"
+                      >
+                        <ZoomOut className="w-4 h-4" />
+                      </button>
+                      <span className="text-[10px] sm:text-xs font-mono font-medium text-gray-500 w-8 sm:w-12 text-center">
+                        {Math.round(previewZoom * 100)}%
+                      </span>
+                      <button 
+                        onClick={() => setPreviewZoom(z => Math.min(2, z + 0.1))}
+                        className="p-1 sm:p-1.5 text-gray-500 hover:text-[#5A5A40] hover:bg-gray-100 rounded-full transition-colors"
+                      >
+                        <ZoomIn className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Mobile Download Button */}
+                    <button
+                      onClick={handleExport}
+                      disabled={isExporting}
+                      className="lg:hidden inline-flex items-center p-2 sm:px-4 sm:py-2 bg-[#5A5A40] text-white rounded-lg sm:rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest hover:bg-[#4A4A35] transition-colors disabled:opacity-50 shadow-sm shrink-0"
+                    >
+                      {isExporting ? (
+                        <span>Đang xử lý...</span>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4 sm:mr-2" />
+                          <span className="hidden sm:inline">TẢI XUỐNG</span>
+                        </>
+                      )}
+                    </button>
                   </div>
 
-              <div className="flex items-center gap-2 bg-white rounded-full p-1 shadow-sm">
-                <button 
-                  onClick={() => setPreviewZoom(z => Math.max(0.3, z - 0.1))}
-                  className="p-1.5 text-gray-500 hover:text-[#5A5A40] hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <ZoomOut className="w-4 h-4" />
-                </button>
-                <span className="text-xs font-mono font-medium text-gray-500 w-12 text-center">
-                  {Math.round(previewZoom * 100)}%
-                </span>
-                <button 
-                  onClick={() => setPreviewZoom(z => Math.min(2, z + 0.1))}
-                  className="p-1.5 text-gray-500 hover:text-[#5A5A40] hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <ZoomIn className="w-4 h-4" />
-                </button>
-              </div>
-              <button
-                onClick={handleExport}
-                disabled={isExporting}
-                className="inline-flex items-center px-5 py-2 bg-[#5A5A40] text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#4A4A35] transition-colors disabled:opacity-50 shadow-sm"
-              >
-                {isExporting ? (
-                  <>Đang xử lý...</>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Xuất ra ảnh (.png)</span>
-                    <span className="sm:hidden ml-1">Xuất ảnh</span>
-                  </>
-                )}
-              </button>
-            </div>
+                  {/* Background Selector */}
+                  <div className="flex items-center justify-start lg:justify-center gap-2 bg-white p-2 lg:p-1.5 rounded-xl lg:rounded-full shadow-sm px-3 overflow-x-auto custom-scrollbar w-full lg:w-auto shrink-0">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0 mr-1">Nền ảnh:</span>
+                    <div className="flex items-center gap-2 sm:gap-1.5 shrink-0">
+                      {[
+                        { id: 0, name: 'Mặc định', bg: templateConfig.backgroundColor || '#ffffff' },
+                        { id: 1, name: 'Morning Light', bg: 'linear-gradient(to bottom, #FFFDF8, #F8F3EA)' },
+                        { id: 2, name: 'Ocean Mind', bg: 'linear-gradient(to bottom, #F8FCFD, #EEF6F8)' },
+                        { id: 3, name: 'Nature', bg: 'linear-gradient(to bottom, #FAFCF8, #F1F6EF)' },
+                        { id: 4, name: 'Sunrise', bg: 'linear-gradient(to bottom, #FFFDF6, #FFF4DD)' },
+                        { id: 5, name: 'Sacred', bg: 'linear-gradient(to bottom, #FAF8F4, #F2EEE5)' },
+                      ].map(bg => (
+                        <button
+                          key={bg.id}
+                          title={bg.name}
+                          onClick={() => setPreviewBgIndex(bg.id)}
+                          className={`w-6 h-6 lg:w-5 lg:h-5 rounded-full transition-all border shadow-sm shrink-0 ${previewBgIndex === bg.id ? 'border-[#5A5A40] ring-2 ring-[#5A5A40]/20 scale-110' : 'border-gray-200 hover:scale-110'}`}
+                          style={{ background: bg.bg }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Desktop Download Button */}
+                  <button
+                    onClick={handleExport}
+                    disabled={isExporting}
+                    className="hidden lg:inline-flex items-center px-5 py-2 bg-[#5A5A40] text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#4A4A35] transition-colors disabled:opacity-50 shadow-sm shrink-0"
+                  >
+                    {isExporting ? (
+                      <span>Đang xử lý...</span>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        <span>TẢI XUỐNG</span>
+                      </>
+                    )}
+                  </button>
+                </div>
 
             <div className="w-full overflow-auto custom-scrollbar pb-24 pt-8 flex justify-center items-start">
               <div 
@@ -338,7 +381,7 @@ export default function App() {
                   className="absolute top-0 left-0 origin-top-left w-[1000px] shadow-2xl transition-transform duration-200"
                   style={{ transform: `scale(${previewZoom})` }}
                 >
-                  <TemplatePreview ref={previewRef} data={formData} config={templateConfig} />
+                  <TemplatePreview ref={previewRef} data={formData} config={templateConfig} bgIndex={previewBgIndex} />
                 </div>
               </div>
             </div>

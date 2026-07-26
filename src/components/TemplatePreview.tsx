@@ -4,10 +4,11 @@ import { FormData, TemplateConfig } from '../types';
 interface TemplatePreviewProps {
   data: FormData;
   config: TemplateConfig;
+  bgIndex?: number;
 }
 
 export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
-  ({ data, config }, ref) => {
+  ({ data, config, bgIndex = 0 }, ref) => {
     const {
       fontSize,
       textColor,
@@ -19,11 +20,39 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
       borderColor3,
     } = config;
 
+    // Helper to get background styles
+    const getBackgroundStyle = () => {
+      const morningLightPattern = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120' opacity='0.03'%3E%3Ccircle cx='60' cy='60' r='20' fill='none' stroke='%23D4AF37' stroke-width='1'/%3E%3Cpath d='M60 10 L60 35 M60 85 L60 110 M10 60 L35 60 M85 60 L110 60 M25 25 L42 42 M95 95 L78 78 M25 95 L42 78 M95 25 L78 42' stroke='%23D4AF37' stroke-width='1'/%3E%3C/svg%3E")`;
+      
+      const oceanMindPattern = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40' opacity='0.04'%3E%3Cpath d='M0 20 Q 20 5, 40 20 T 80 20' fill='none' stroke='%23005577' stroke-width='1.5'/%3E%3Cpath d='M0 30 Q 20 15, 40 30 T 80 30' fill='none' stroke='%23005577' stroke-width='0.5'/%3E%3C/svg%3E")`;
+
+      const naturePattern = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100' opacity='0.04'%3E%3Cpath d='M10 90 Q 40 40, 90 10' fill='none' stroke='%232E8B57' stroke-width='1'/%3E%3Cpath d='M90 10 Q 95 20, 80 25 Q 75 10, 90 10 Z' fill='%232E8B57'/%3E%3Cpath d='M50 40 Q 45 25, 60 20 Q 65 35, 50 40 Z' fill='%232E8B57' opacity='0.5'/%3E%3Cpath d='M30 65 Q 25 50, 40 45 Q 45 60, 30 65 Z' fill='%232E8B57' opacity='0.5'/%3E%3C/svg%3E")`;
+
+      const sunrisePattern = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120' opacity='0.03'%3E%3Ccircle cx='60' cy='60' r='40' fill='none' stroke='%23FF7F50' stroke-dasharray='2 6' stroke-width='2'/%3E%3Cpath d='M60 55 Q 70 30, 60 15 Q 50 30, 60 55 Z' fill='none' stroke='%23FF7F50' stroke-width='1'/%3E%3Cpath d='M60 65 Q 70 90, 60 105 Q 50 90, 60 65 Z' fill='none' stroke='%23FF7F50' stroke-width='1'/%3E%3Cpath d='M55 60 Q 30 70, 15 60 Q 30 50, 55 60 Z' fill='none' stroke='%23FF7F50' stroke-width='1'/%3E%3Cpath d='M65 60 Q 90 70, 105 60 Q 90 50, 65 60 Z' fill='none' stroke='%23FF7F50' stroke-width='1'/%3E%3C/svg%3E")`;
+
+      const sacredPattern = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100' opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%23B8860B' stroke-width='0.5'/%3E%3Ccircle cx='50' cy='50' r='35' fill='none' stroke='%23B8860B' stroke-width='0.5'/%3E%3Cpolygon points='50,10 85,70 15,70' fill='none' stroke='%23B8860B' stroke-width='0.5'/%3E%3Cpolygon points='50,90 85,30 15,30' fill='none' stroke='%23B8860B' stroke-width='0.5'/%3E%3C/svg%3E")`;
+
+      switch (bgIndex) {
+        case 1:
+          return { background: `${morningLightPattern}, linear-gradient(to bottom, #FFFDF8, #F8F3EA)` };
+        case 2:
+          return { background: `${oceanMindPattern}, linear-gradient(to bottom, #F8FCFD, #EEF6F8)` };
+        case 3:
+          return { background: `${naturePattern}, linear-gradient(to bottom, #FAFCF8, #F1F6EF)` };
+        case 4:
+          return { background: `${sunrisePattern}, linear-gradient(to bottom, #FFFDF6, #FFF4DD)` };
+        case 5:
+          return { background: `${sacredPattern}, linear-gradient(to bottom, #FAF8F4, #F2EEE5)` };
+        default:
+          return { backgroundColor: config.backgroundColor || '#ffffff' };
+      }
+    };
+
     return (
       <div
         ref={ref}
         className="w-[1000px] flex flex-col gap-6 relative pb-12"
-        style={{ fontFamily, fontSize: `${fontSize}px`, color: textColor, backgroundColor: config.backgroundColor || '#ffffff' }}
+        style={{ fontFamily, fontSize: `${fontSize}px`, color: textColor, ...getBackgroundStyle() }}
       >
         {/* Header Spacer */}
         <div style={{ height: '48px', width: '100%', flexShrink: 0 }}></div>
