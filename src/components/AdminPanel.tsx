@@ -362,7 +362,7 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
                 )}
                 <div className="flex-1 space-y-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Tải ảnh lên (Khuyên dùng PNG)</label>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Tải ảnh lên</label>
                     <input
                       type="file"
                       accept="image/*"
@@ -374,8 +374,8 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
                             const img = new window.Image();
                             img.onload = () => {
                               const canvas = document.createElement('canvas');
-                              const MAX_WIDTH = 2048;
-                              const MAX_HEIGHT = 2048;
+                              const MAX_WIDTH = 1024;
+                              const MAX_HEIGHT = 1024;
                               let width = img.width;
                               let height = img.height;
 
@@ -394,8 +394,16 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
                               canvas.height = height;
                               const ctx = canvas.getContext('2d');
                               ctx?.clearRect(0, 0, width, height);
+                              
+                              // Fill background with white in case of transparent PNG to JPEG conversion
+                              if (ctx) {
+                                ctx.fillStyle = '#FFFFFF';
+                                ctx.fillRect(0, 0, width, height);
+                              }
+                              
                               ctx?.drawImage(img, 0, 0, width, height);
-                              const dataUrl = canvas.toDataURL('image/png');
+                              // Use JPEG with 0.7 quality to reduce base64 size for Firestore
+                              const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
                               onChange({ ...config, guideImageUrl: dataUrl });
                             };
                             img.src = reader.result as string;
