@@ -110,7 +110,20 @@ export default function App() {
 
         // Capture actual crisp PNG snapshot
         const dataUrl = await toPng(previewRef.current!, exportOptions);
-        download(dataUrl, `TamThuc_${formData.date.replace(/\//g, '-')}.png`);
+        
+        // Convert dataUrl to Blob for better mobile/iOS support
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.download = `TamThuc_${formData.date.replace(/\//g, '-')}.png`;
+        link.href = blobUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
       } catch (err) {
         console.error('Error exporting image', err);
         alert('Có lỗi xảy ra khi xuất ảnh.');

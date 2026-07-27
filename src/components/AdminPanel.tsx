@@ -305,8 +305,8 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
                           const img = new window.Image();
                           img.onload = () => {
                             const canvas = document.createElement('canvas');
-                            const MAX_WIDTH = 2048;
-                            const MAX_HEIGHT = 2048;
+                            const MAX_WIDTH = 512;
+                            const MAX_HEIGHT = 512;
                             let width = img.width;
                             let height = img.height;
 
