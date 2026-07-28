@@ -44,17 +44,25 @@ interface TextAreaFieldProps {
   placeholder?: string;
   value: string;
   config?: TemplateConfig;
+  maxLength?: number;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
 }
 
-const TextAreaField = ({ label, name, rows = 3, placeholder, value, config, onChange }: TextAreaFieldProps) => {
+const TextAreaField = ({ label, name, rows = 3, placeholder, value, config, maxLength, onChange }: TextAreaFieldProps) => {
   const [isFocused, setIsFocused] = useState(false);
   
   const fieldConfig = config?.fieldsConfig?.[name];
 
   return (
     <div>
-      <label className="text-[10px] text-gray-500 italic mb-1 block">{label}</label>
+      <div className="flex justify-between items-end mb-1">
+        <label className="text-[10px] text-gray-500 italic block">{label}</label>
+        {maxLength && (
+          <span className={`text-[10px] ${value.length >= maxLength ? 'text-red-500' : 'text-gray-400'}`}>
+            {value.length}/{maxLength}
+          </span>
+        )}
+      </div>
       {fieldConfig?.type === 'select' ? (
         <select
           name={name}
@@ -76,6 +84,7 @@ const TextAreaField = ({ label, name, rows = 3, placeholder, value, config, onCh
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
+          maxLength={maxLength}
           className="w-full bg-[#F9F9F7] border border-transparent focus:border-[#7A8471] rounded p-2 text-[12px] text-[#3C3633] outline-none transition-colors resize-none"
         />
       )}
@@ -276,7 +285,7 @@ export function FormInput({ data, config, onChange, onPreview, onHelp }: FormInp
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
           <div className="space-y-4">
-            <TextAreaField config={config} label="Tình huống" name="tinhHuong" rows={2} placeholder="Tình huống..." value={data.tinhHuong} onChange={handleChange} />
+            <TextAreaField config={config} label="Tình huống" name="tinhHuong" rows={2} placeholder="Tình huống..." value={data.tinhHuong} onChange={handleChange} maxLength={400} />
             <TextAreaField config={config} label="Thực cảnh" name="thucCanh" rows={2} placeholder="Sự việc diễn ra..." value={data.thucCanh} onChange={handleChange} />
           </div>
         </div>

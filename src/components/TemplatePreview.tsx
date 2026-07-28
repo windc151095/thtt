@@ -55,52 +55,62 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
         style={{ fontFamily, fontSize: `${fontSize}px`, color: textColor, ...getBackgroundStyle() }}
       >
         {/* Header Spacer */}
-        <div style={{ height: '48px', width: '100%', flexShrink: 0 }}></div>
+        <div style={{ height: '32px', width: '100%', flexShrink: 0 }}></div>
+
         {/* Header */}
-        <div className="flex justify-between items-start px-8 border-b-[1px] pb-6" style={{ borderColor: headingColor1 }}>
-          {/* Logo Area */}
-          <div className="w-[280px] text-center mt-2 flex flex-col items-center shrink-0">
+        <div className="flex items-stretch px-8 border-b-[1px] pb-4" style={{ borderColor: headingColor1 }}>
+          {/* Left Column */}
+          <div className="w-[270px] flex flex-col items-center justify-center pr-5 border-r-[1px] shrink-0" style={{ borderColor: headingColor1 }}>
             {config.logoUrl ? (
-              <img src={config.logoUrl} alt="Sống Sáng Suốt Logo" className="w-full max-h-[80px] object-contain mb-4" />
+              <img src={config.logoUrl} alt="Sống Sáng Suốt Logo" className="w-full max-w-[240px] max-h-[70px] object-contain mb-3" />
             ) : (
-              <div className="mb-4 text-gray-400 border-2 border-dashed border-gray-300 rounded-lg w-full h-[80px] flex flex-col items-center justify-center">
+              <div className="mb-3 text-gray-400 border-2 border-dashed border-gray-300 rounded-lg w-[230px] h-[70px] flex flex-col items-center justify-center">
                 <span className="text-xs font-bold uppercase">Chưa có Logo</span>
-                <span className="text-[10px]">Vào Cài đặt để thêm Logo</span>
+                <span className="text-[10px]">Cài đặt</span>
               </div>
             )}
-            
-            <p className="font-bold text-[14px] mt-2 whitespace-nowrap" style={{ color: headingColor1 }}>
-              Writer: {data.writer || '....................'}
-            </p>
-            <p className="italic text-[14px] whitespace-nowrap" style={{ color: headingColor1 }}>
-              {data.date || '..../..../202..'}
-            </p>
-          </div>
-
-          {/* Center Titles */}
-          <div className="text-center flex-1 mt-2 px-2 min-w-0">
             <h2 className="font-bold text-[18px] uppercase mb-1 whitespace-nowrap" style={{ color: headingColor2, fontFamily }}>
               THỰC LUYỆN TÂM THỨC
             </h2>
-            <h3 className="font-bold text-[16px] uppercase mb-4 whitespace-nowrap" style={{ color: headingColor1, fontFamily }}>
+            <h3 className="font-bold text-[16px] uppercase whitespace-nowrap" style={{ color: headingColor1, fontFamily }}>
               20 BỘ ĐỜI SỐNG TÂM THỨC
             </h3>
-            <div className="flex justify-center items-center gap-1 text-[14px] font-bold italic mt-8">
-              <span className="text-[14px] whitespace-nowrap" style={{ color: headingColor2 }}>Tình huống:</span>
-              <span className="text-[14px]" style={{ color: headingColor1 }}>{data.tinhHuong || 'Nuông chiều mình trong mua sắm'}</span>
-            </div>
           </div>
 
-          {/* Right Area */}
-          <div className="w-[280px] text-center mt-2 flex flex-col items-center shrink-0">
-            <h4 className="font-bold text-[14px] uppercase mb-0.5 whitespace-nowrap">
-              <span style={{ color: headingColor2 }}>BỘ 01.</span> <span style={{ color: headingColor1 }}>ĐỜI SỐNG CÁ NHÂN</span>
-            </h4>
-            <div className="font-bold text-[14px] mb-0.5 whitespace-nowrap">
-              <span style={{ color: headingColor2 }}>Giai đoạn 01. </span><span style={{ color: headingColor1 }}>Hình thành nền móng</span>
+          {/* Middle & Right Grid */}
+          <div className="flex-1 grid grid-cols-[340px_1fr] content-start relative">
+            {/* Vertical border between Middle and Right */}
+            <div className="absolute top-0 bottom-0 left-[340px] border-l-[1px]" style={{ borderColor: headingColor1 }}></div>
+
+            {/* Middle Content */}
+            <div className="flex flex-col gap-1 pl-6 pr-6 min-w-0">
+              <h4 className="font-bold text-[14px] uppercase whitespace-nowrap" style={{ color: headingColor2 }}>
+                BỘ 01. ĐỜI SỐNG CÁ NHÂN
+              </h4>
+              <div className="font-bold text-[14px] whitespace-nowrap" style={{ color: headingColor1 }}>
+                Giai đoạn 01. Hình thành nền móng
+              </div>
+              <div className="font-bold text-[14px] leading-snug break-words" style={{ color: '#555555' }}>
+                {data.thucCanh || 'Thực cảnh 01. Được nuông chiều từ nhỏ'}
+              </div>
+              <div className="font-bold text-[14px] whitespace-nowrap" style={{ color: headingColor1 }}>
+                Writer: {data.writer || 'Thành Công'}
+              </div>
             </div>
-            <div className="flex justify-center items-center gap-1 text-[14px] font-bold">
-              <span style={{ color: headingColor1 }}>{data.thucCanh || 'Được nuông chiều từ nhỏ'}</span>
+
+            {/* Right Content */}
+            <div className="pl-6 min-w-0 flex flex-col h-full">
+              <div className="flex-1 flex flex-col justify-center">
+                <div className="text-[15px] italic break-words text-justify">
+                  <span style={{ color: headingColor2 }}>Tình huống: </span>
+                  <span style={{ color: headingColor1 }}>{data.tinhHuong || 'Nuông chiều mình trong mua sắm'}</span>
+                </div>
+              </div>
+              <div className="flex justify-end mt-2">
+                <p className="italic text-[14px] whitespace-nowrap" style={{ color: '#555555' }}>
+                  {data.date || '23/07/2026'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
