@@ -285,7 +285,7 @@ export function FormInput({ data, config, onChange, onPreview, onHelp }: FormInp
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
           <div className="space-y-4">
-            <TextAreaField config={config} label="Tình huống" name="tinhHuong" rows={2} placeholder="Tình huống..." value={data.tinhHuong} onChange={handleChange} maxLength={400} />
+            <TextAreaField config={config} label="Tên tình huống ngắn gọn" name="tinhHuong" rows={2} placeholder="Tình huống..." value={data.tinhHuong} onChange={handleChange} maxLength={300} />
             <TextAreaField config={config} label="Thực cảnh" name="thucCanh" rows={2} placeholder="Sự việc diễn ra..." value={data.thucCanh} onChange={handleChange} />
           </div>
         </div>

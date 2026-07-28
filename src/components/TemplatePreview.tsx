@@ -62,7 +62,7 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
           {/* Left Column */}
           <div className="w-[270px] flex flex-col items-center justify-center pr-5 border-r-[1px] shrink-0" style={{ borderColor: headingColor1 }}>
             {config.logoUrl ? (
-              <img src={config.logoUrl} alt="Sống Sáng Suốt Logo" className="w-full max-w-[240px] max-h-[70px] object-contain mb-3" />
+              <img src={config.logoUrl} alt="Sống Sáng Suốt Logo" className="w-[250px] h-[31px] object-contain mb-3" />
             ) : (
               <div className="mb-3 text-gray-400 border-2 border-dashed border-gray-300 rounded-lg w-[230px] h-[70px] flex flex-col items-center justify-center">
                 <span className="text-xs font-bold uppercase">Chưa có Logo</span>
