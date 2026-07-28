@@ -298,7 +298,7 @@ export function FormInput({ data, config, onChange, onPreview, onHelp }: FormInp
           </div>
           <div className="space-y-4 pl-4 border-l border-[#E2E2D8] ml-3">
             <TextAreaField config={config} label="1. Soi tính xấu (Mình đang có tính xấu gì)" name="soiTinhXau" rows={2} value={data.soiTinhXau} onChange={handleChange} />
-            <TextAreaField config={config} label="2. Xét độc hại (Độc tính nào đang vận hành)" name="xetDocHai" rows={3} value={data.xetDocHai} onChange={handleChange} />
+            <TextAreaField config={config} label="2. Xét độc hại (Độc tính nào đang phát tác)" name="xetDocHai" rows={3} value={data.xetDocHai} onChange={handleChange} />
             <TextAreaField config={config} label="3. Thấy hậu quả (Hậu quả nào sẽ xảy ra)" name="thayHauQua" rows={2} value={data.thayHauQua} onChange={handleChange} />
           </div>
         </div>
@@ -310,7 +310,7 @@ export function FormInput({ data, config, onChange, onPreview, onHelp }: FormInp
             <p className="text-xs font-black text-[#9A8C73] uppercase tracking-wider" style={{ fontFamily: "'Google Sans', sans-serif" }}>Nhận dạng tâm thức</p>
           </div>
           <div className="space-y-4 pl-4 border-l border-[#E2E2D8] ml-3">
-            <TextAreaField config={config} label="1. Nhìn gốc (Nhân gốc lành cấy sâu)" name="nhinGoc" rows={2} value={data.nhinGoc} onChange={handleChange} />
+            <TextAreaField config={config} label="1. Nhìn gốc (Nhân gốc mạnh cầy sâu)" name="nhinGoc" rows={2} value={data.nhinGoc} onChange={handleChange} />
             <TextAreaField config={config} label="2. Chọn tâm (Xây giá trị phát triển)" name="chonTam" rows={3} value={data.chonTam} onChange={handleChange} />
             <TextAreaField config={config} label="3. Dưỡng tính (Đức tính cần rèn luyện)" name="duongTinh" rows={2} value={data.duongTinh} onChange={handleChange} />
           </div>

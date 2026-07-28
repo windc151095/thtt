@@ -137,7 +137,7 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
                 className="p-3 border-b-[1px] flex-[2]"
                 style={{ borderColor: borderColor1 }}
               >
-                <div style={{ color: headingColor1 }} className="mb-1 font-bold text-[14px] whitespace-nowrap">2. Xét độc hại <span className="font-normal">(Độc tính nào đang vận hành)</span></div>
+                <div style={{ color: headingColor1 }} className="mb-1 font-bold text-[14px] whitespace-nowrap">2. Xét độc hại <span className="font-normal">(Độc tính nào đang phát tác)</span></div>
                 <div className="whitespace-pre-wrap mb-2">{data.xetDocHai}</div>
               </div>
               <div className="p-3 flex-1">
@@ -160,7 +160,7 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
                 className="p-3 border-b-[1px] flex-1"
                 style={{ borderColor: borderColor2 }}
               >
-                <div style={{ color: headingColor2 }} className="mb-1 font-bold text-[14px] whitespace-nowrap">1. Nhìn gốc <span className="font-normal">(Nhân gốc lành cấy sâu)</span></div>
+                <div style={{ color: headingColor2 }} className="mb-1 font-bold text-[14px] whitespace-nowrap">1. Nhìn gốc <span className="font-normal">(Nhân gốc mạnh cầy sâu)</span></div>
                 <div className="whitespace-pre-wrap">{data.nhinGoc}</div>
               </div>
               <div
