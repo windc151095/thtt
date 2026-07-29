@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { TemplateConfig, FormData } from '../types';
-import { Settings, Database, Trash2, Eye, LogOut, MessageCircle, XCircle } from 'lucide-react';
+import { Settings, Database, Trash2, Eye, LogOut, MessageCircle, XCircle, Plus, Copy } from 'lucide-react';
 import { collection, getDocs, doc, deleteDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 interface AdminPanelProps {
   config: TemplateConfig;
   onChange: (config: TemplateConfig) => void;
-  onSave?: () => void;
+  onSave?: (config?: TemplateConfig) => void;
   onViewDraft?: (data: FormData) => void;
 }
 
@@ -72,35 +72,64 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
   const [activeTab, setActiveTab] = useState<'settings' | 'drafts' | 'fields' | 'chat'>('drafts');
       const [drafts, setDrafts] = useState<{ pin: string; timestamp: number; data: FormData }[]>([]);
   const [confirmAction, setConfirmAction] = useState<{ message: string, onConfirm: () => void } | null>(null);
-  const [chatMessages, setChatMessages] = useState<{ id: string; senderName: string; content?: string; timestamp: number }[]>([]);
-  const [activeMembers, setActiveMembers] = useState<{ name: string; messageCount: number }[]>([]);
+  const [supportCases, setSupportCases] = useState<any[]>([]);
+  const [newSupporterName, setNewSupporterName] = useState('');
+  const [newSupporterCode, setNewSupporterCode] = useState('');
 
 
   useEffect(() => {
     if (isAuthenticated) {
       loadDrafts();
-      loadChatMessages();
-      const interval = setInterval(() => { loadDrafts(); loadChatMessages(); }, 15000); // Sync drafts every 15 seconds
+      loadSupportCases();
+      const interval = setInterval(() => { loadDrafts(); loadSupportCases(); }, 15000); // Sync drafts every 15 seconds
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
 
   
-  const loadChatMessages = async () => {
+  
+  const handleAddSupporter = () => {
+    if (!newSupporterName.trim() || !newSupporterCode.trim()) return;
+    const currentSupporters = config.supporters || [];
+    
+    if (currentSupporters.some(s => s.code === newSupporterCode.trim())) {
+      alert('Mã này đã tồn tại!');
+      return;
+    }
+
+    const newConfig = {
+      ...config,
+      supporters: [...currentSupporters, { name: newSupporterName.trim(), code: newSupporterCode.trim() }]
+    };
+    onChange(newConfig);
+    setNewSupporterName('');
+    setNewSupporterCode('');
+    if (onSave) onSave(newConfig);
+  };
+
+  const handleRemoveSupporter = (code: string) => {
+    setConfirmAction({
+      message: 'Bạn có chắc muốn xóa người trợ lực này?',
+      onConfirm: () => {
+        const currentSupporters = config.supporters || [];
+        const newConfig = {
+          ...config,
+          supporters: currentSupporters.filter(s => s.code !== code)
+        };
+        onChange(newConfig);
+        if (onSave) onSave(newConfig);
+      }
+    });
+  };
+
+  const loadSupportCases = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'chat_messages'));
-      const msgs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
-      msgs.sort((a, b) => b.timestamp - a.timestamp);
-      setChatMessages(msgs);
-      
-      const memberMap = new Map<string, number>();
-      msgs.forEach(msg => {
-        const count = memberMap.get(msg.senderName) || 0;
-        memberMap.set(msg.senderName, count + 1);
-      });
-      setActiveMembers(Array.from(memberMap.entries()).map(([name, messageCount]) => ({ name, messageCount })));
+      const querySnapshot = await getDocs(collection(db, 'support_cases'));
+      const cases = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+      cases.sort((a, b) => b.createdAt - a.createdAt);
+      setSupportCases(cases);
     } catch (error) {
-      console.error('Lỗi khi tải tin nhắn:', error);
+      console.error('Lỗi khi tải cases:', error);
     }
   };
 
@@ -139,45 +168,32 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
   };
 
   
-  const deleteAllChatMessages = async () => {
+  const deleteAllSupportCases = async () => {
     setConfirmAction({
-      message: 'Bạn có chắc muốn xóa tất cả tin nhắn chat không? Hành động này không thể hoàn tác.',
+      message: 'Bạn có chắc muốn xóa tất cả case hỗ trợ không? Hành động này không thể hoàn tác.',
       onConfirm: async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, 'chat_messages'));
-        const deletePromises = querySnapshot.docs.map(docSnap => deleteDoc(doc(db, 'chat_messages', docSnap.id)));
+        const querySnapshot = await getDocs(collection(db, 'support_cases'));
+        const deletePromises = querySnapshot.docs.map(docSnap => deleteDoc(doc(db, 'support_cases', docSnap.id)));
         await Promise.all(deletePromises);
-        
-        // Kick all active members
-        const kickPromises = activeMembers.map(member => setDoc(doc(db, 'chat_kicks', member.name), { timestamp: Date.now() }));
-        kickPromises.push(setDoc(doc(db, 'chat_kicks', 'GLOBAL_KICK_ALL'), { timestamp: Date.now() }));
-        await Promise.all(kickPromises);
-        loadChatMessages();
+        loadSupportCases();
       } catch (error) {
-        console.error('Lỗi khi xóa chat:', error);
-        alert('Có lỗi xảy ra khi xóa tin nhắn.');
+        console.error('Lỗi khi xóa cases:', error);
+        alert('Có lỗi xảy ra khi xóa cases.');
       }
     }
     });
   };
 
-  const deleteMemberMessages = async (memberName: string) => {
+  const deleteSupportCase = async (caseId: string) => {
     setConfirmAction({
-      message: `Bạn có chắc muốn xóa tất cả tin nhắn của thành viên "${memberName}"?`,
+      message: `Bạn có chắc muốn xóa case "${caseId}"?`,
       onConfirm: async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, 'chat_messages'));
-        const deletePromises = querySnapshot.docs
-          .filter(docSnap => docSnap.data().senderName === memberName)
-          .map(docSnap => deleteDoc(doc(db, 'chat_messages', docSnap.id)));
-        await Promise.all(deletePromises);
-        
-        // Kick member
-        await setDoc(doc(db, 'chat_kicks', memberName), { timestamp: Date.now() });
-        
-        loadChatMessages();
+        await deleteDoc(doc(db, 'support_cases', caseId));
+        loadSupportCases();
       } catch (error) {
-        console.error('Lỗi khi xóa tin nhắn của thành viên:', error);
+        console.error('Lỗi khi xóa case:', error);
         alert('Có lỗi xảy ra khi xóa.');
       }
     }
@@ -597,7 +613,7 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
           {onSave && (
             <div className="pt-4 flex justify-end">
               <button
-                onClick={onSave}
+                onClick={() => onSave()}
                 className="px-6 py-2 bg-[#5A5A40] text-white text-xs font-bold uppercase tracking-wider rounded shadow-sm hover:bg-[#4A4A35] transition-colors"
               >
                 Lưu tùy chọn
@@ -610,63 +626,122 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
       {activeTab === 'chat' && (
         <div className="p-8 space-y-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[12px] font-black text-[#5A5A40] uppercase tracking-widest">Quản lý Chat/Hỗ trợ</h3>
+            <h3 className="text-[12px] font-black text-[#5A5A40] uppercase tracking-widest">Quản lý Case Hỗ Trợ</h3>
             <button
-              onClick={deleteAllChatMessages}
+              onClick={deleteAllSupportCases}
               className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors"
             >
               <Trash2 className="w-4 h-4" />
-              Xóa tất cả chat
+              Xóa tất cả case
             </button>
           </div>
 
-          <div className="space-y-4">
-            <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Thành viên đang trong chat ({activeMembers.length})</h4>
-            {activeMembers.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">Không có thành viên nào.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activeMembers.map((member) => (
-                  <div key={member.name} className="flex items-center justify-between p-4 bg-[#F9F9F7] border border-[#E2E2D8] rounded-lg">
-                    <div>
-                      <div className="font-bold text-[#3C3633]">{member.name}</div>
-                      <div className="text-xs text-gray-500">{member.messageCount} tin nhắn</div>
-                    </div>
-                    <button
-                      onClick={() => deleteMemberMessages(member.name)}
-                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                      title="Xóa tất cả tin nhắn của người này"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
           
-          <div className="space-y-4 mt-8">
-            <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Tin nhắn gần đây ({chatMessages.length})</h4>
-            <div className="bg-[#F9F9F7] border border-[#E2E2D8] rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
+          <div className="space-y-4 mb-8">
+            <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Quản lý Người Trợ Lực (Cấp mã)</h4>
+            <div className="bg-[#F9F9F7] border border-[#E2E2D8] rounded-lg p-4">
+              <div className="flex gap-2 mb-4 flex-col sm:flex-row">
+                <input
+                  type="text"
+                  value={newSupporterName}
+                  onChange={(e) => setNewSupporterName(e.target.value)}
+                  placeholder="Họ tên người trợ lực..."
+                  className="flex-1 p-2 border border-[#E2E2D8] rounded text-sm focus:outline-none focus:border-[#5A5A40]"
+                />
+                <input
+                  type="text"
+                  value={newSupporterCode}
+                  onChange={(e) => setNewSupporterCode(e.target.value)}
+                  placeholder="Mã số (VD: 1111)..."
+                  className="flex-1 p-2 border border-[#E2E2D8] rounded text-sm focus:outline-none focus:border-[#5A5A40]"
+                />
+                <button
+                  onClick={handleAddSupporter}
+                  disabled={!newSupporterName.trim() || !newSupporterCode.trim()}
+                  className="px-4 py-2 bg-[#3C3633] text-white rounded font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#2A2523] disabled:opacity-50"
+                >
+                  <Plus className="w-4 h-4" />
+                  Thêm
+                </button>
+              </div>
+              
+              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+                {(!config.supporters || config.supporters.length === 0) ? (
+                  <p className="text-sm text-gray-500 italic text-center py-4">Chưa có người trợ lực nào được cấp mã.</p>
+                ) : (
+                  config.supporters.map((s, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-white border border-[#E2E2D8] rounded shadow-sm">
+                      <div>
+                        <div className="font-bold text-[#3C3633] text-sm">{s.name}</div>
+                        <div className="text-xs text-gray-500 font-mono mt-1 flex items-center gap-2">
+                          Mã: <span className="bg-gray-100 px-2 py-0.5 rounded text-[#5A5A40] font-bold">{s.code}</span>
+                          <button 
+                            onClick={() => { navigator.clipboard.writeText(s.code); alert('Đã copy mã!'); }}
+                            className="text-gray-400 hover:text-[#5A5A40]"
+                            title="Copy mã"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveSupporter(s.code)}
+                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                        title="Xóa"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Danh sách Case ({supportCases.length})</h4>
+            <div className="bg-[#F9F9F7] border border-[#E2E2D8] rounded-lg overflow-hidden max-h-[500px] overflow-y-auto">
               <table className="w-full text-left border-collapse">
-                <thead className="bg-[#E2E2D8] sticky top-0">
+                <thead className="bg-[#E2E2D8] sticky top-0 z-10">
                   <tr>
-                    <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Người gửi</th>
-                    <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Nội dung</th>
+                    <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Mã Case</th>
+                    <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Tên case</th>
+                    <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Học viên</th>
+                    <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Trạng thái</th>
+                    <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Trợ lực viên</th>
+                    <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Công khai</th>
                     <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Thời gian</th>
+                    <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E2D8]">
-                  {chatMessages.length === 0 ? (
+                  {supportCases.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="p-4 text-center text-sm text-gray-500 italic">Không có tin nhắn nào.</td>
+                      <td colSpan={8} className="p-4 text-center text-sm text-gray-500 italic">Không có case nào.</td>
                     </tr>
                   ) : (
-                    chatMessages.slice(0, 50).map((msg) => (
-                      <tr key={msg.id} className="hover:bg-white transition-colors">
-                        <td className="p-3 text-xs font-semibold text-[#3C3633] whitespace-nowrap">{msg.senderName}</td>
-                        <td className="p-3 text-xs text-gray-600 max-w-[300px] truncate">{msg.content || '(Ảnh đính kèm)'}</td>
-                        <td className="p-3 text-xs text-gray-500 whitespace-nowrap">{new Date(msg.timestamp).toLocaleString()}</td>
+                    supportCases.map((c) => (
+                      <tr key={c.id} className="hover:bg-white transition-colors">
+                        <td className="p-3 text-xs font-semibold text-[#3C3633] whitespace-nowrap">{c.id}</td>
+                        <td className="p-3 text-xs text-gray-600 max-w-[150px] truncate" title={c.publicTitle}>{c.publicTitle || "-"}</td>
+                        <td className="p-3 text-xs text-gray-600">{c.studentName}</td>
+                        <td className="p-3 text-xs">
+                          <span className={`px-2 py-1 rounded-full font-bold uppercase text-[10px] ${c.status === 'pending' ? 'bg-red-100 text-red-600' : (c.status === 'processing' ? 'bg-yellow-100 text-yellow-700' : (c.status === 'completed' && c.isPublic ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'))}`}>
+                            {c.status === 'pending' ? 'Chờ' : (c.status === 'processing' ? 'Đang xử lý' : (c.status === 'completed' && c.isPublic ? 'Công khai' : 'Kết thúc'))}
+                          </span>
+                        </td>
+                        <td className="p-3 text-xs text-gray-600">{c.supporterName || '-'}</td>
+                        <td className="p-3 text-xs text-gray-600">{c.isPublic ? 'Có' : 'Không'}</td>
+                        <td className="p-3 text-xs text-gray-500 whitespace-nowrap">{new Date(c.createdAt).toLocaleString()}</td>
+                        <td className="p-3 text-xs">
+                          <button
+                            onClick={() => deleteSupportCase(c.id)}
+                            className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                            title="Xóa case"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -723,7 +798,7 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
           {onSave && (
             <div className="pt-4 flex justify-end border-t border-[#E2E2D8]">
               <button
-                onClick={onSave}
+                onClick={() => onSave()}
                 className="px-6 py-2 bg-[#5A5A40] text-white text-xs font-bold uppercase tracking-wider rounded shadow-sm hover:bg-[#4A4A35] transition-colors mt-4"
               >
                 Lưu cấu hình

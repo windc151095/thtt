@@ -16,6 +16,8 @@ export interface TemplateConfig {
   logoUrl?: string;
   guideImageUrl?: string;
   fieldsConfig?: Record<string, FieldConfig>;
+  supporterCode?: string;
+  supporters?: { name: string; code: string }[];
 }
 
 export interface FormData {

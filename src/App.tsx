@@ -71,10 +71,10 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSaveConfig = async () => {
+  const handleSaveConfig = async (overrideConfig?: TemplateConfig) => {
     try {
       const configRef = doc(db, 'config', 'global');
-      await setDoc(configRef, templateConfig);
+      await setDoc(configRef, overrideConfig || templateConfig);
       alert('Đã lưu tùy chọn cấu hình thành công cho tất cả mọi người!');
     } catch (e: any) {
       console.error(e);

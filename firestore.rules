@@ -72,5 +72,17 @@ service cloud.firestore {
     match /chat_kicks/{kickId} {
       allow read, write: if true;
     }
+    
+    match /support_cases/{caseId} {
+      allow read, write: if true;
+    }
+    
+    match /support_messages/{messageId} {
+      allow read, write: if true;
+    }
+    
+    match /chat_settings/{docId} {
+      allow read, write: if true;
+    }
   }
 }
