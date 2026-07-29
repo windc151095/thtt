@@ -285,34 +285,34 @@ export function FormInput({ data, config, onChange, onPreview, onHelp }: FormInp
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
           <div className="space-y-4">
-            <TextAreaField config={config} label="Tên tình huống ngắn gọn" name="tinhHuong" rows={2} placeholder="Tình huống..." value={data.tinhHuong} onChange={handleChange} maxLength={300} />
+            <TextAreaField config={config} label="Tên tình huống ngắn gọn" name="tinhHuong" rows={2} placeholder="Tình huống..." value={data.tinhHuong} onChange={handleChange} maxLength={150} />
             <TextAreaField config={config} label="Thực cảnh" name="thucCanh" rows={2} placeholder="Sự việc diễn ra..." value={data.thucCanh} onChange={handleChange} />
-          </div>
-        </div>
-
-        {/* Nhận dạng vô thức */}
-        <div className="pt-6 border-t border-[#F5F5F0]">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="w-6 h-6 rounded-full bg-[#7A8471] text-white flex items-center justify-center text-[10px] font-bold">01</span>
-            <p className="text-xs font-black text-[#7A8471] uppercase tracking-wider" style={{ fontFamily: "'Google Sans', sans-serif" }}>Nhận dạng vô thức</p>
-          </div>
-          <div className="space-y-4 pl-4 border-l border-[#E2E2D8] ml-3">
-            <TextAreaField config={config} label="1. Soi tính xấu (Mình đang có tính xấu gì)" name="soiTinhXau" rows={2} value={data.soiTinhXau} onChange={handleChange} />
-            <TextAreaField config={config} label="2. Xét độc hại (Độc tính nào đang phát tác)" name="xetDocHai" rows={3} value={data.xetDocHai} onChange={handleChange} />
-            <TextAreaField config={config} label="3. Thấy hậu quả (Hậu quả nào sẽ xảy ra)" name="thayHauQua" rows={2} value={data.thayHauQua} onChange={handleChange} />
           </div>
         </div>
 
         {/* Nhận dạng tâm thức */}
         <div className="pt-6 border-t border-[#F5F5F0]">
           <div className="flex items-center gap-3 mb-4">
-            <span className="w-6 h-6 rounded-full bg-[#9A8C73] text-white flex items-center justify-center text-[10px] font-bold">02</span>
+            <span className="w-6 h-6 rounded-full bg-[#9A8C73] text-white flex items-center justify-center text-[10px] font-bold">01</span>
             <p className="text-xs font-black text-[#9A8C73] uppercase tracking-wider" style={{ fontFamily: "'Google Sans', sans-serif" }}>Nhận dạng tâm thức</p>
           </div>
           <div className="space-y-4 pl-4 border-l border-[#E2E2D8] ml-3">
             <TextAreaField config={config} label="1. Nhìn gốc (Nhân gốc mạnh cầy sâu)" name="nhinGoc" rows={2} value={data.nhinGoc} onChange={handleChange} />
             <TextAreaField config={config} label="2. Chọn tâm (Xây giá trị phát triển)" name="chonTam" rows={3} value={data.chonTam} onChange={handleChange} />
             <TextAreaField config={config} label="3. Dưỡng tính (Đức tính cần rèn luyện)" name="duongTinh" rows={2} value={data.duongTinh} onChange={handleChange} />
+          </div>
+        </div>
+
+        {/* Nhận dạng vô thức */}
+        <div className="pt-6 border-t border-[#F5F5F0]">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="w-6 h-6 rounded-full bg-[#7A8471] text-white flex items-center justify-center text-[10px] font-bold">02</span>
+            <p className="text-xs font-black text-[#7A8471] uppercase tracking-wider" style={{ fontFamily: "'Google Sans', sans-serif" }}>Nhận dạng vô thức</p>
+          </div>
+          <div className="space-y-4 pl-4 border-l border-[#E2E2D8] ml-3">
+            <TextAreaField config={config} label="1. Soi tính xấu (Mình đang có tính xấu gì)" name="soiTinhXau" rows={2} value={data.soiTinhXau} onChange={handleChange} />
+            <TextAreaField config={config} label="2. Xét độc hại (Độc tính nào đang phát tác)" name="xetDocHai" rows={3} value={data.xetDocHai} onChange={handleChange} />
+            <TextAreaField config={config} label="3. Thấy hậu quả (Hậu quả nào sẽ xảy ra)" name="thayHauQua" rows={2} value={data.thayHauQua} onChange={handleChange} />
           </div>
         </div>
 
