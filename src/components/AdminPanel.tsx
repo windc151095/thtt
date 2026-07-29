@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TemplateConfig, FormData } from '../types';
-import { Settings, Database, Trash2, Eye, LogOut } from 'lucide-react';
+import { Settings, Database, Trash2, Eye, LogOut, MessageCircle, XCircle } from 'lucide-react';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -69,16 +69,40 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'settings' | 'drafts' | 'fields'>('drafts');
-  const [drafts, setDrafts] = useState<{ pin: string; timestamp: number; data: FormData }[]>([]);
+  const [activeTab, setActiveTab] = useState<'settings' | 'drafts' | 'fields' | 'chat'>('drafts');
+      const [drafts, setDrafts] = useState<{ pin: string; timestamp: number; data: FormData }[]>([]);
+  const [confirmAction, setConfirmAction] = useState<{ message: string, onConfirm: () => void } | null>(null);
+  const [chatMessages, setChatMessages] = useState<{ id: string; senderName: string; content?: string; timestamp: number }[]>([]);
+  const [activeMembers, setActiveMembers] = useState<{ name: string; messageCount: number }[]>([]);
+
 
   useEffect(() => {
     if (isAuthenticated) {
       loadDrafts();
-      const interval = setInterval(loadDrafts, 15000); // Sync drafts every 15 seconds
+      loadChatMessages();
+      const interval = setInterval(() => { loadDrafts(); loadChatMessages(); }, 15000); // Sync drafts every 15 seconds
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
+
+  
+  const loadChatMessages = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'chat_messages'));
+      const msgs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+      msgs.sort((a, b) => b.timestamp - a.timestamp);
+      setChatMessages(msgs);
+      
+      const memberMap = new Map<string, number>();
+      msgs.forEach(msg => {
+        const count = memberMap.get(msg.senderName) || 0;
+        memberMap.set(msg.senderName, count + 1);
+      });
+      setActiveMembers(Array.from(memberMap.entries()).map(([name, messageCount]) => ({ name, messageCount })));
+    } catch (error) {
+      console.error('Lỗi khi tải tin nhắn:', error);
+    }
+  };
 
   const loadDrafts = async () => {
     const localDrafts = [];
@@ -114,8 +138,47 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
     }
   };
 
+  
+  const deleteAllChatMessages = async () => {
+    setConfirmAction({
+      message: 'Bạn có chắc muốn xóa tất cả tin nhắn chat không? Hành động này không thể hoàn tác.',
+      onConfirm: async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'chat_messages'));
+        const deletePromises = querySnapshot.docs.map(docSnap => deleteDoc(doc(db, 'chat_messages', docSnap.id)));
+        await Promise.all(deletePromises);
+        loadChatMessages();
+      } catch (error) {
+        console.error('Lỗi khi xóa chat:', error);
+        alert('Có lỗi xảy ra khi xóa tin nhắn.');
+      }
+    }
+    });
+  };
+
+  const deleteMemberMessages = async (memberName: string) => {
+    setConfirmAction({
+      message: `Bạn có chắc muốn xóa tất cả tin nhắn của thành viên "${memberName}"?`,
+      onConfirm: async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'chat_messages'));
+        const deletePromises = querySnapshot.docs
+          .filter(docSnap => docSnap.data().senderName === memberName)
+          .map(docSnap => deleteDoc(doc(db, 'chat_messages', docSnap.id)));
+        await Promise.all(deletePromises);
+        loadChatMessages();
+      } catch (error) {
+        console.error('Lỗi khi xóa tin nhắn của thành viên:', error);
+        alert('Có lỗi xảy ra khi xóa.');
+      }
+    }
+    });
+  };
+
   const handleDeleteDraft = async (pin: string) => {
-    if (confirm(`Bạn có chắc muốn xóa bài viết có mã PIN ${pin}?`)) {
+    setConfirmAction({
+      message: `Bạn có chắc muốn xóa bài viết có mã PIN ${pin}?`,
+      onConfirm: async () => {
       localStorage.removeItem(`draft_${pin}`);
       try {
         await deleteDoc(doc(db, 'drafts', pin));
@@ -125,6 +188,7 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
         loadDrafts();
       }
     }
+    });
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -201,38 +265,73 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
   }
 
   return (
+    <>
+      {confirmAction && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
+            <h3 className="font-bold text-lg mb-4 text-gray-800">Xác nhận</h3>
+            <p className="text-gray-600 mb-6">{confirmAction.message}</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  confirmAction.onConfirm();
+                  setConfirmAction(null);
+                }}
+                className="px-4 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg transition-colors font-medium"
+              >
+                Đồng ý xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     <div className="bg-white rounded-2xl shadow-xl shadow-black/5 flex flex-col border border-white/50 w-full overflow-hidden mb-12">
-      <div className="flex border-b border-[#E2E2D8] bg-[#F5F5F0]">
+      <div className="flex flex-wrap md:flex-nowrap border-b border-[#E2E2D8] bg-[#F5F5F0]">
         <button
           onClick={() => setActiveTab('drafts')}
-          className={`flex-1 py-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+          className={`flex-1 min-w-[120px] py-4 px-2 flex items-center justify-center gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-colors whitespace-nowrap ${
             activeTab === 'drafts' ? 'bg-white text-[#5A5A40] border-t-2 border-t-[#5A5A40]' : 'text-gray-400 hover:text-gray-600'
           }`}
         >
           <Database className="w-4 h-4" />
-          Quản lý bài viết
+          Bài viết
         </button>
         <button
           onClick={() => setActiveTab('settings')}
-          className={`flex-1 py-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+          className={`flex-1 min-w-[120px] py-4 px-2 flex items-center justify-center gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-colors whitespace-nowrap ${
             activeTab === 'settings' ? 'bg-white text-[#5A5A40] border-t-2 border-t-[#5A5A40]' : 'text-gray-400 hover:text-gray-600'
           }`}
         >
           <Settings className="w-4 h-4" />
-          Cài đặt hiển thị
+          Hiển thị
+        </button>
+        <button
+          onClick={() => setActiveTab('chat')}
+          className={`flex-1 min-w-[120px] py-4 px-2 flex items-center justify-center gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-colors whitespace-nowrap ${
+            activeTab === 'chat' ? 'bg-white text-[#5A5A40] border-t-2 border-t-[#5A5A40]' : 'text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          <MessageCircle className="w-4 h-4" />
+          Chat
         </button>
         <button
           onClick={() => setActiveTab('fields')}
-          className={`flex-1 py-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+          className={`flex-1 min-w-[120px] py-4 px-2 flex items-center justify-center gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-colors whitespace-nowrap ${
             activeTab === 'fields' ? 'bg-white text-[#5A5A40] border-t-2 border-t-[#5A5A40]' : 'text-gray-400 hover:text-gray-600'
           }`}
         >
           <Settings className="w-4 h-4" />
-          Cấu hình trường nhập
+          Trường nhập
         </button>
         <button
           onClick={handleLogout}
-          className="px-6 py-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors border-l border-[#E2E2D8]"
+          className="shrink-0 px-4 sm:px-6 py-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors md:border-l border-[#E2E2D8]"
           title="Đăng xuất"
         >
           <LogOut className="w-4 h-4" />
@@ -499,6 +598,76 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
         </div>
       )}
 
+      {activeTab === 'chat' && (
+        <div className="p-8 space-y-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[12px] font-black text-[#5A5A40] uppercase tracking-widest">Quản lý Chat/Hỗ trợ</h3>
+            <button
+              onClick={deleteAllChatMessages}
+              className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Xóa tất cả chat
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Thành viên đang trong chat ({activeMembers.length})</h4>
+            {activeMembers.length === 0 ? (
+              <p className="text-sm text-gray-500 italic">Không có thành viên nào.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeMembers.map((member) => (
+                  <div key={member.name} className="flex items-center justify-between p-4 bg-[#F9F9F7] border border-[#E2E2D8] rounded-lg">
+                    <div>
+                      <div className="font-bold text-[#3C3633]">{member.name}</div>
+                      <div className="text-xs text-gray-500">{member.messageCount} tin nhắn</div>
+                    </div>
+                    <button
+                      onClick={() => deleteMemberMessages(member.name)}
+                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                      title="Xóa tất cả tin nhắn của người này"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="space-y-4 mt-8">
+            <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Tin nhắn gần đây ({chatMessages.length})</h4>
+            <div className="bg-[#F9F9F7] border border-[#E2E2D8] rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-[#E2E2D8] sticky top-0">
+                  <tr>
+                    <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Người gửi</th>
+                    <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Nội dung</th>
+                    <th className="p-3 text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]">Thời gian</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E2E2D8]">
+                  {chatMessages.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="p-4 text-center text-sm text-gray-500 italic">Không có tin nhắn nào.</td>
+                    </tr>
+                  ) : (
+                    chatMessages.slice(0, 50).map((msg) => (
+                      <tr key={msg.id} className="hover:bg-white transition-colors">
+                        <td className="p-3 text-xs font-semibold text-[#3C3633] whitespace-nowrap">{msg.senderName}</td>
+                        <td className="p-3 text-xs text-gray-600 max-w-[300px] truncate">{msg.content || '(Ảnh đính kèm)'}</td>
+                        <td className="p-3 text-xs text-gray-500 whitespace-nowrap">{new Date(msg.timestamp).toLocaleString()}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'fields' && (
         <div className="p-8 space-y-8">
           <div className="flex items-center justify-between mb-4">
@@ -555,5 +724,6 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
         </div>
       )}
     </div>
+    </>
   );
 }

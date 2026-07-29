@@ -18,8 +18,12 @@ export const ChatPopup: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isInitialLoad = useRef(true);
+  const isOpenRef = useRef(isOpen);
 
   useEffect(() => {
     const savedName = localStorage.getItem('chat_senderName');
@@ -30,8 +34,16 @@ export const ChatPopup: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!isOpen) return;
-    
+    isOpenRef.current = isOpen;
+    if (isOpen) {
+      setUnreadCount(0);
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     const q = query(collection(db, 'chat_messages'), orderBy('timestamp', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgs: ChatMessage[] = [];
@@ -39,13 +51,25 @@ export const ChatPopup: React.FC = () => {
         msgs.push({ id: doc.id, ...doc.data() } as ChatMessage);
       });
       setMessages(msgs);
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+
+      if (!isInitialLoad.current && !isOpenRef.current) {
+        const addedCount = snapshot.docChanges().filter(change => change.type === 'added').length;
+        if (addedCount > 0) {
+          setUnreadCount(prev => prev + addedCount);
+        }
+      }
+      
+      isInitialLoad.current = false;
+
+      if (isOpenRef.current) {
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
     });
 
     return () => unsubscribe();
-  }, [isOpen]);
+  }, []);
 
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,6 +154,10 @@ export const ChatPopup: React.FC = () => {
     }
   };
 
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   if (!isOpen) {
     return (
       <button 
@@ -137,6 +165,11 @@ export const ChatPopup: React.FC = () => {
         className="fixed bottom-6 right-6 bg-[#2B4B6F] text-white p-4 rounded-full shadow-lg hover:bg-opacity-90 transition-all z-50 flex items-center justify-center"
       >
         <MessageCircle size={28} />
+        {unreadCount > 0 && (
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-md">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
       </button>
     );
   }
@@ -181,7 +214,7 @@ export const ChatPopup: React.FC = () => {
                 const isMe = msg.senderName === senderName;
                 return (
                   <div key={msg.id} className={`flex flex-col max-w-[85%] ${isMe ? 'self-end items-end' : 'self-start items-start'}`}>
-                    <span className="text-xs text-gray-500 mb-1 ml-1">{msg.senderName}</span>
+                    <span className="text-xs text-gray-500 mb-1 ml-1">{msg.senderName} • {formatTime(msg.timestamp)}</span>
                     <div className={`p-3 rounded-2xl ${isMe ? 'bg-[#2B4B6F] text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'}`}>
                       {msg.imageUrl && (
                         <img src={msg.imageUrl} alt="attached" className="max-w-full rounded-lg mb-2 object-contain" />

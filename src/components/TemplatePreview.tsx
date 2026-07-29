@@ -132,7 +132,7 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
                 className="p-3 border-b-[1px] flex-1"
                 style={{ borderColor: borderColor2 }}
               >
-                <div style={{ color: headingColor2 }} className="mb-1 font-bold text-[14px] whitespace-nowrap">1. Nhìn gốc <span className="font-normal">(Nhân gốc mạnh cầy sâu)</span></div>
+                <div style={{ color: headingColor2 }} className="mb-1 font-bold text-[14px] whitespace-nowrap">1. Nhìn gốc <span className="font-normal">(Nhân gốc mạnh cấy sâu)</span></div>
                 <div className="whitespace-pre-wrap">{data.nhinGoc}</div>
               </div>
               <div
