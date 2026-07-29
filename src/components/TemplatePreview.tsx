@@ -69,10 +69,10 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
                 <span className="text-[10px]">Cài đặt</span>
               </div>
             )}
-            <h2 className="font-bold text-[18px] uppercase mb-1 whitespace-nowrap" style={{ color: headingColor2, fontFamily }}>
+            <h2 className="font-bold text-[18px] uppercase mb-1 whitespace-nowrap tracking-[1px]" style={{ color: headingColor2, fontFamily }}>
               THỰC LUYỆN TÂM THỨC
             </h2>
-            <h3 className="font-bold text-[16px] uppercase whitespace-nowrap" style={{ color: headingColor1, fontFamily }}>
+            <h3 className="font-bold text-[16px] uppercase whitespace-nowrap tracking-[1px]" style={{ color: headingColor1, fontFamily }}>
               20 BỘ ĐỜI SỐNG TÂM THỨC
             </h3>
           </div>
