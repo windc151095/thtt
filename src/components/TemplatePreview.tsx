@@ -72,7 +72,7 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
             <h2 className="font-bold text-[18px] uppercase mb-1 whitespace-nowrap tracking-[0.5px]" style={{ color: headingColor2, fontFamily }}>
               THỰC LUYỆN TÂM THỨC
             </h2>
-            <h3 className="font-bold text-[16px] uppercase whitespace-nowrap tracking-[0.5px]" style={{ color: headingColor1, fontFamily }}>
+            <h3 className="font-bold text-[15.5px] leading-[22px] uppercase whitespace-nowrap tracking-[0.5px]" style={{ color: headingColor1, fontFamily }}>
               20 BỘ ĐỜI SỐNG TÂM THỨC
             </h3>
           </div>
@@ -84,7 +84,7 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
 
             {/* Middle Content */}
             <div className="flex flex-col gap-1 pl-6 pr-6 min-w-0 justify-center h-full">
-              <h4 className="font-bold text-[14px] uppercase whitespace-nowrap" style={{ color: headingColor2 }}>
+              <h4 className="font-bold text-[15px] uppercase whitespace-nowrap" style={{ color: headingColor2 }}>
                 BỘ 01. ĐỜI SỐNG CÁ NHÂN
               </h4>
               <div className="font-bold text-[14px] uppercase whitespace-nowrap" style={{ color: headingColor1 }}>
