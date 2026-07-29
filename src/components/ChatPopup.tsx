@@ -40,6 +40,10 @@ export const ChatPopup: React.FC = () => {
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
   const [activeCase, setActiveCase] = useState<SupportCase | null>(null);
   const [allCases, setAllCases] = useState<SupportCase[]>([]);
+  const allCasesRef = useRef<SupportCase[]>([]);
+  useEffect(() => {
+    allCasesRef.current = allCases;
+  }, [allCases]);
   const [publicCases, setPublicCases] = useState<SupportCase[]>([]);
   
   // Messages states
@@ -82,6 +86,78 @@ export const ChatPopup: React.FC = () => {
       setUnreadCount(0);
     }
   }, [isOpen]);
+
+  // Notifications for Supporter
+  useEffect(() => {
+    if (role === 'supporter' && isSupporterAuth && !isOpen) {
+      const now = Date.now();
+      
+      const qCases = query(
+        collection(db, 'support_cases'),
+        where('createdAt', '>', now),
+        orderBy('createdAt', 'desc')
+      );
+      const unsubCases = onSnapshot(qCases, (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const newCase = change.doc.data();
+            if (newCase.status === 'pending') {
+              setUnreadCount(prev => prev + 1);
+            }
+          }
+        });
+      });
+
+      const qMsgs = query(
+        collection(db, 'support_messages'),
+        where('timestamp', '>', now),
+        orderBy('timestamp', 'asc')
+      );
+      const unsubMsgs = onSnapshot(qMsgs, (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const msg = change.doc.data();
+            if (msg.senderRole === 'student') {
+              const caseObj = allCasesRef.current.find(c => c.id === msg.caseId);
+              if (caseObj && caseObj.supporterName === supporterNameInput) {
+                setUnreadCount(prev => prev + 1);
+              }
+            }
+          }
+        });
+      });
+
+      return () => {
+        unsubCases();
+        unsubMsgs();
+      };
+    }
+  }, [role, isSupporterAuth, isOpen, supporterNameInput]);
+
+  // Notifications for Student
+  useEffect(() => {
+    const studentCaseId = activeCaseId || (typeof window !== 'undefined' ? localStorage.getItem('chat_activeCaseId') : null);
+    if (role === 'student' && isStudentAuth && !isOpen && studentCaseId) {
+      const now = Date.now();
+      const q = query(
+        collection(db, 'support_messages'),
+        where('caseId', '==', studentCaseId),
+        where('timestamp', '>', now),
+        orderBy('timestamp', 'asc')
+      );
+      const unsub = onSnapshot(q, (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const msg = change.doc.data();
+            if (msg.senderRole !== 'student') {
+              setUnreadCount(prev => prev + 1);
+            }
+          }
+        });
+      });
+      return () => unsub();
+    }
+  }, [role, isStudentAuth, isOpen, activeCaseId]);
 
   // Fetch cases for supporter
   useEffect(() => {
@@ -505,6 +581,15 @@ export const ChatPopup: React.FC = () => {
             {/* Dashboard for Student */}
             {role === 'student' && isStudentAuth && !activeCaseId && (
               <div className="p-4 flex flex-col h-full">
+                {localStorage.getItem('chat_activeCaseId') ? (
+                  <button
+                    onClick={() => setActiveCaseId(localStorage.getItem('chat_activeCaseId'))}
+                    className="w-full py-4 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-colors mb-4 flex items-center justify-center gap-2"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    Quay lại case của bạn
+                  </button>
+                ) : null}
                 <button
                   onClick={handleCreateCase}
                   className="w-full py-4 bg-[#3C3633] text-white rounded-lg font-bold shadow-md hover:bg-[#2A2523] transition-colors mb-6 flex items-center justify-center gap-2"
