@@ -354,9 +354,9 @@ export const ChatPopup: React.FC = () => {
       {/* Chat Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-[#3C3633] text-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#5A5A40] transition-transform hover:scale-105 z-50"
+        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 w-12 h-12 md:w-14 md:h-14 bg-[#3C3633] text-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#5A5A40] transition-transform hover:scale-105 z-50"
       >
-        <MessageCircle className="w-6 h-6" />
+        <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
         {unreadCount > 0 && !isOpen && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -366,7 +366,7 @@ export const ChatPopup: React.FC = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-[380px] h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50 border border-[#E2E2D8]">
+        <div className="fixed bottom-20 right-4 w-[calc(100vw-32px)] sm:w-[380px] h-[550px] sm:h-[600px] md:bottom-24 md:right-6 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[60] border border-[#E2E2D8]">
           {/* Header */}
           <div className="p-4 bg-[#3C3633] text-white flex flex-col justify-between items-start">
             <div className="w-full flex items-center justify-between mb-2">
