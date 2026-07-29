@@ -68,5 +68,9 @@ service cloud.firestore {
       allow create: if isValidChatMessage(incoming());
       allow delete: if true;
     }
+    
+    match /chat_kicks/{kickId} {
+      allow read, write: if true;
+    }
   }
 }

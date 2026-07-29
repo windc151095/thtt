@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Image as ImageIcon, XCircle } from 'lucide-react';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export interface ChatMessage {
@@ -71,10 +71,37 @@ export const ChatPopup: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!isNameEntered || !senderName) return;
+
+    const handleKickSnapshot = (snapshot: any) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const joinTime = parseInt(localStorage.getItem('chat_joinTime') || '0', 10);
+        if (data.timestamp > joinTime) {
+          localStorage.removeItem('chat_senderName');
+          localStorage.removeItem('chat_joinTime');
+          setSenderName('');
+          setIsNameEntered(false);
+          alert('Phiên chat của bạn đã được quản trị viên đặt lại.');
+        }
+      }
+    };
+
+    const unsubscribeUser = onSnapshot(doc(db, 'chat_kicks', senderName), handleKickSnapshot);
+    const unsubscribeGlobal = onSnapshot(doc(db, 'chat_kicks', 'GLOBAL_KICK_ALL'), handleKickSnapshot);
+
+    return () => {
+      unsubscribeUser();
+      unsubscribeGlobal();
+    };
+  }, [isNameEntered, senderName]);
+
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (senderName.trim()) {
       localStorage.setItem('chat_senderName', senderName.trim());
+      localStorage.setItem('chat_joinTime', Date.now().toString());
       setIsNameEntered(true);
     }
   };

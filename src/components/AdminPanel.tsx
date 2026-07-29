@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TemplateConfig, FormData } from '../types';
 import { Settings, Database, Trash2, Eye, LogOut, MessageCircle, XCircle } from 'lucide-react';
-import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 interface AdminPanelProps {
@@ -147,6 +147,11 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
         const querySnapshot = await getDocs(collection(db, 'chat_messages'));
         const deletePromises = querySnapshot.docs.map(docSnap => deleteDoc(doc(db, 'chat_messages', docSnap.id)));
         await Promise.all(deletePromises);
+        
+        // Kick all active members
+        const kickPromises = activeMembers.map(member => setDoc(doc(db, 'chat_kicks', member.name), { timestamp: Date.now() }));
+        kickPromises.push(setDoc(doc(db, 'chat_kicks', 'GLOBAL_KICK_ALL'), { timestamp: Date.now() }));
+        await Promise.all(kickPromises);
         loadChatMessages();
       } catch (error) {
         console.error('Lỗi khi xóa chat:', error);
@@ -166,6 +171,10 @@ export function AdminPanel({ config, onChange, onSave, onViewDraft }: AdminPanel
           .filter(docSnap => docSnap.data().senderName === memberName)
           .map(docSnap => deleteDoc(doc(db, 'chat_messages', docSnap.id)));
         await Promise.all(deletePromises);
+        
+        // Kick member
+        await setDoc(doc(db, 'chat_kicks', memberName), { timestamp: Date.now() });
+        
         loadChatMessages();
       } catch (error) {
         console.error('Lỗi khi xóa tin nhắn của thành viên:', error);
