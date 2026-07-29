@@ -10,6 +10,7 @@ import { defaultFormData, defaultTemplateConfig, FormData, TemplateConfig } from
 import { FormInput } from './components/FormInput';
 import { TemplatePreview } from './components/TemplatePreview';
 import { AdminPanel } from './components/AdminPanel';
+import { ChatPopup } from './components/ChatPopup';
 
 type Tab = 'fill' | 'preview' | 'admin';
 
@@ -437,6 +438,7 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      <ChatPopup />
     </div>
   );
 }

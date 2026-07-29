@@ -83,11 +83,13 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
             <div className="absolute top-0 bottom-0 left-[340px] border-l-[1px]" style={{ borderColor: headingColor1 }}></div>
 
             {/* Middle Content */}
-            <div className="flex flex-col gap-1 pl-6 pr-6 min-w-0 justify-center h-full">
-              <h4 className="font-bold text-[15px] uppercase whitespace-nowrap" style={{ color: headingColor2 }}>
-                BỘ 01. ĐỜI SỐNG CÁ NHÂN
-              </h4>
-              <div className="font-bold text-[14px] uppercase whitespace-nowrap" style={{ color: headingColor1 }}>
+            <div className="flex flex-col pl-6 pr-6 min-w-0 justify-center h-full">
+              <div className="h-[31px] mb-3 flex items-center">
+                <h4 className="font-bold text-[15px] uppercase whitespace-nowrap" style={{ color: headingColor2 }}>
+                  BỘ 01. ĐỜI SỐNG CÁ NHÂN
+                </h4>
+              </div>
+              <div className="font-bold text-[14px] uppercase whitespace-nowrap mb-1" style={{ color: headingColor1 }}>
                 Giai đoạn 01. Hình thành nền móng
               </div>
               <div className="font-bold text-[14px] leading-snug break-words uppercase" style={{ color: headingColor1 }}>
