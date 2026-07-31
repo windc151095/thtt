@@ -72,7 +72,7 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
             <h2 className="font-bold text-[18px] uppercase mb-1 whitespace-nowrap tracking-[0.5px]" style={{ color: headingColor2, fontFamily }}>
               THỰC LUYỆN TÂM THỨC
             </h2>
-            <h3 className="font-bold text-[15.5px] leading-[22px] uppercase whitespace-nowrap tracking-[0.5px]" style={{ color: headingColor1, fontFamily }}>
+            <h3 className="font-bold text-[15.5px] leading-[22px] uppercase whitespace-nowrap tracking-[0.5px]" style={{ color: headingColor2, fontFamily }}>
               20 BỘ ĐỜI SỐNG TÂM THỨC
             </h3>
           </div>
@@ -85,15 +85,27 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
             {/* Middle Content */}
             <div className="flex flex-col pl-6 pr-6 min-w-0 justify-center h-full">
               <div className="h-[31px] mb-3 flex items-center">
-                <h4 className="font-bold text-[15px] uppercase whitespace-nowrap" style={{ color: headingColor2 }}>
-                  BỘ 01. ĐỜI SỐNG CÁ NHÂN
+                <h4 className="font-bold text-[15px] uppercase whitespace-nowrap">
+                  <span style={{ color: headingColor1 }}>BỘ 01. </span><span style={{ color: headingColor2 }}>ĐỜI SỐNG CÁ NHÂN</span>
                 </h4>
               </div>
-              <div className="font-bold text-[14px] uppercase whitespace-nowrap mb-1" style={{ color: headingColor1 }}>
-                Giai đoạn 01. Hình thành nền móng
+              <div className="font-bold text-[14px] uppercase whitespace-nowrap mb-1">
+                <span style={{ color: headingColor2 }}>Giai đoạn 01. </span><span style={{ color: headingColor1 }}>Hình thành nền móng</span>
               </div>
-              <div className="font-bold text-[14px] leading-snug break-words uppercase" style={{ color: headingColor1 }}>
-                {data.thucCanh || 'Thực cảnh 01. Được nuông chiều từ nhỏ'}
+              <div className="font-bold text-[14px] leading-snug break-words uppercase">
+                {(() => {
+                  const val = data.thucCanh || 'Thực cảnh 01. Được nuông chiều từ nhỏ';
+                  const parts = val.split('. ');
+                  if (parts.length > 1) {
+                    return (
+                      <>
+                        <span style={{ color: headingColor2 }}>{parts[0]}. </span>
+                        <span style={{ color: headingColor1 }}>{parts.slice(1).join('. ')}</span>
+                      </>
+                    );
+                  }
+                  return <span style={{ color: headingColor2 }}>{val}</span>;
+                })()}
               </div>
             </div>
 
@@ -109,7 +121,7 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
                 <p className="font-bold text-[14px] whitespace-nowrap" style={{ color: headingColor1 }}>
                   Writer: {data.writer || 'Thành Công'}
                 </p>
-                <p className="italic text-[14px] whitespace-nowrap" style={{ color: '#555555' }}>
+                <p className="italic text-[14px] whitespace-nowrap" style={{ color: headingColor1 }}>
                   {data.date || '23/07/2026'}
                 </p>
               </div>
@@ -151,7 +163,7 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
 
           {/* Right Column */}
           <div>
-            <h3 className="font-bold uppercase mb-2 tracking-wide text-[16px] whitespace-nowrap" style={{ color: headingColor1, fontFamily }}>
+            <h3 className="font-bold uppercase mb-2 tracking-wide text-[16px] whitespace-nowrap" style={{ color: headingColor2, fontFamily }}>
               NHẬN DẠNG VÔ THỨC
             </h3>
             <div

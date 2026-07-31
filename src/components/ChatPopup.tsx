@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Image as ImageIcon, XCircle, ChevronLeft, CheckCircle, Eye } from 'lucide-react';
+import { MessageCircle, X, Send, Image as ImageIcon, XCircle, ChevronLeft, CheckCircle, Eye, ArrowLeftRight, UserPlus, Check } from 'lucide-react';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, setDoc, getDoc, updateDoc, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -11,16 +11,25 @@ export interface SupportCase {
   publicTitle?: string;
   createdAt: number;
   supporterName?: string;
+  coSupporters?: string[];
+  transferRequests?: Record<string, {
+    type: 'transfer' | 'add';
+    from: string;
+    status: 'pending' | 'accepted' | 'rejected';
+  }>;
 }
 
 export interface SupportMessage {
   id?: string;
   caseId: string;
   senderName: string;
-  senderRole: 'student' | 'supporter' | 'admin';
+  senderRole: 'student' | 'supporter' | 'admin' | 'system';
   content?: string;
   imageUrl?: string;
   timestamp: number;
+  type?: 'text' | 'image' | 'system_transfer_request' | 'system_add_request' | 'system_transfer_accepted' | 'system_transfer_rejected' | 'system_add_accepted' | 'system_add_rejected';
+  targetSupporter?: string;
+  actionStatus?: 'pending' | 'accepted' | 'rejected';
 }
 
 export const ChatPopup: React.FC = () => {
@@ -54,6 +63,10 @@ export const ChatPopup: React.FC = () => {
   const [publicTitleInput, setPublicTitleInput] = useState('');
   
   const [unreadCount, setUnreadCount] = useState(0);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [showTransferPopup, setShowTransferPopup] = useState(false);
+  const [showAddPopup, setShowAddPopup] = useState(false);
+  const [supportersList, setSupportersList] = useState<{name: string, code: string}[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -87,6 +100,16 @@ export const ChatPopup: React.FC = () => {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (role === 'supporter' && isSupporterAuth && isOpen) {
+      getDoc(doc(db, 'config', 'global')).then((docSnap) => {
+        if (docSnap.exists()) {
+          setSupportersList(docSnap.data().supporters || []);
+        }
+      });
+    }
+  }, [role, isSupporterAuth, isOpen]);
+
   // Notifications for Supporter
   useEffect(() => {
     if (role === 'supporter' && isSupporterAuth && !isOpen) {
@@ -119,15 +142,20 @@ export const ChatPopup: React.FC = () => {
             const msg = change.doc.data();
             if (msg.senderRole === 'student') {
               const caseObj = allCasesRef.current.find(c => c.id === msg.caseId);
-              if (caseObj && caseObj.supporterName === supporterNameInput) {
+              if (caseObj && (caseObj.supporterName === supporterNameInput || (caseObj.coSupporters || []).includes(supporterNameInput))) {
                 setUnreadCount(prev => prev + 1);
               }
+            } else if (msg.senderRole === 'system' && msg.targetSupporter === supporterNameInput && msg.actionStatus === 'pending') {
+              setUnreadCount(prev => prev + 1);
             }
           }
         });
       });
 
-      return () => {
+    
+
+
+  return () => {
         unsubCases();
         unsubMsgs();
       };
@@ -155,7 +183,8 @@ export const ChatPopup: React.FC = () => {
           }
         });
       });
-      return () => unsub();
+    
+  return () => unsub();
     }
   }, [role, isStudentAuth, isOpen, activeCaseId]);
 
@@ -170,7 +199,8 @@ export const ChatPopup: React.FC = () => {
         });
         setAllCases(cases);
       });
-      return () => unsubscribe();
+    
+  return () => unsubscribe();
     }
   }, [role, isSupporterAuth]);
 
@@ -185,7 +215,8 @@ export const ChatPopup: React.FC = () => {
         });
         setPublicCases(cases);
       });
-      return () => unsubscribe();
+    
+  return () => unsubscribe();
     }
   }, [role, activeCaseId]);
 
@@ -201,7 +232,8 @@ export const ChatPopup: React.FC = () => {
           localStorage.removeItem('chat_activeCaseId');
         }
       });
-      return () => unsubscribe();
+    
+  return () => unsubscribe();
     } else {
       setActiveCase(null);
     }
@@ -221,7 +253,8 @@ export const ChatPopup: React.FC = () => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
       });
-      return () => unsubscribe();
+    
+  return () => unsubscribe();
     } else {
       setMessages([]);
     }
@@ -366,12 +399,135 @@ export const ChatPopup: React.FC = () => {
     }
   };
 
+
+  const handleTransferRequest = async (targetSupporterName: string) => {
+    if (!activeCaseId || !activeCase) return;
+    try {
+      const type = 'transfer';
+      await updateDoc(doc(db, 'support_cases', activeCaseId), {
+        [`transferRequests.${targetSupporterName}`]: {
+          type,
+          from: supporterNameInput,
+          status: 'pending'
+        }
+      });
+      await addDoc(collection(db, 'support_messages'), {
+        caseId: activeCaseId,
+        senderName: 'Hệ thống',
+        senderRole: 'system',
+        type: 'system_transfer_request',
+        targetSupporter: targetSupporterName,
+        actionStatus: 'pending',
+        content: `${supporterNameInput} muốn chuyển quyền hỗ trợ case này cho ${targetSupporterName}.`,
+        timestamp: Date.now(),
+      });
+      setShowTransferPopup(false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAddRequest = async (targetSupporterName: string) => {
+    if (!activeCaseId || !activeCase) return;
+    try {
+      const type = 'add';
+      await updateDoc(doc(db, 'support_cases', activeCaseId), {
+        [`transferRequests.${targetSupporterName}`]: {
+          type,
+          from: supporterNameInput,
+          status: 'pending'
+        }
+      });
+      await addDoc(collection(db, 'support_messages'), {
+        caseId: activeCaseId,
+        senderName: 'Hệ thống',
+        senderRole: 'system',
+        type: 'system_add_request',
+        targetSupporter: targetSupporterName,
+        actionStatus: 'pending',
+        content: `${supporterNameInput} muốn thêm ${targetSupporterName} vào hỗ trợ case này.`,
+        timestamp: Date.now(),
+      });
+      setShowAddPopup(false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAcceptAction = async (msgId: string, caseId: string, type: 'transfer' | 'add', fromSupporter: string) => {
+    try {
+      const caseRef = doc(db, 'support_cases', caseId);
+      const caseSnap = await getDoc(caseRef);
+      if (caseSnap.exists()) {
+        const cData = caseSnap.data();
+        const updates: any = {};
+        updates[`transferRequests.${supporterNameInput}.status`] = 'accepted';
+        
+        if (type === 'transfer') {
+          updates.supporterName = supporterNameInput;
+        } else if (type === 'add') {
+          const currentCo = cData.coSupporters || [];
+          if (!currentCo.includes(supporterNameInput)) {
+            updates.coSupporters = [...currentCo, supporterNameInput];
+          }
+        }
+        await updateDoc(caseRef, updates);
+      }
+      
+      const msgRef = doc(db, 'support_messages', msgId);
+      await updateDoc(msgRef, {
+        actionStatus: 'accepted'
+      });
+      
+      await addDoc(collection(db, 'support_messages'), {
+        caseId,
+        senderName: 'Hệ thống',
+        senderRole: 'system',
+        type: type === 'transfer' ? 'system_transfer_accepted' : 'system_add_accepted',
+        content: `${supporterNameInput} đã đồng ý ${type === 'transfer' ? 'nhận quyền' : 'tham gia'} hỗ trợ.`,
+        timestamp: Date.now(),
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleRejectAction = async (msgId: string, caseId: string, type: 'transfer' | 'add', fromSupporter: string) => {
+    try {
+      const caseRef = doc(db, 'support_cases', caseId);
+      await updateDoc(caseRef, {
+        [`transferRequests.${supporterNameInput}.status`]: 'rejected'
+      });
+      
+      const msgRef = doc(db, 'support_messages', msgId);
+      await updateDoc(msgRef, {
+        actionStatus: 'rejected'
+      });
+      
+      await addDoc(collection(db, 'support_messages'), {
+        caseId,
+        senderName: 'Hệ thống',
+        senderRole: 'system',
+        type: type === 'transfer' ? 'system_transfer_rejected' : 'system_add_rejected',
+        content: `Người trợ lực mà bạn yêu cầu (${supporterNameInput}) đã từ chối.`,
+        timestamp: Date.now(),
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!newMessage.trim() && !selectedImage) || !activeCaseId) return;
 
     const senderName = role === 'supporter' ? supporterNameInput : studentNameInput;
     
+    if (selectedImage && selectedImage.length > 900 * 1024) {
+      alert('Kích thước ảnh quá lớn để gửi. Vui lòng chọn ảnh khác.');
+      return;
+    }
+
     const msg: any = {
       caseId: activeCaseId,
       senderName,
@@ -402,13 +558,48 @@ export const ChatPopup: React.FC = () => {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 1024 * 1024) {
-        alert('Kích thước ảnh không được vượt quá 1MB');
-        return;
-      }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Max dimensions
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Compress with WebP (or JPEG)
+          const dataUrl = canvas.toDataURL('image/webp', 0.7);
+          
+          // Check if it is still too large for Firestore (~1MB limit, so limit base64 to ~700KB)
+          if (dataUrl.length > 700 * 1024) {
+            alert('Ảnh sau khi nén vẫn quá lớn. Vui lòng chọn ảnh khác nhỏ hơn.');
+            return;
+          }
+          
+          setSelectedImage(dataUrl);
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
     }
@@ -423,6 +614,20 @@ export const ChatPopup: React.FC = () => {
     setIsSupporterAuth(false);
     setIsStudentAuth(false);
     setActiveCaseId(null);
+  };
+
+
+  const isMyPendingRequest = (c: SupportCase) => {
+    const req = c.transferRequests?.[supporterNameInput];
+    return req && req.status === 'pending';
+  };
+  const isCoSupporter = (c: SupportCase) => {
+    return c.coSupporters?.includes(supporterNameInput);
+  };
+  const filterSupporterCase = (c: SupportCase) => {
+    return c.status === 'pending' || 
+           ((c.status === 'processing' || c.status === 'completed') && 
+            (c.supporterName === supporterNameInput || isCoSupporter(c) || isMyPendingRequest(c)));
   };
 
   return (
@@ -454,12 +659,32 @@ export const ChatPopup: React.FC = () => {
                 )}
                 <h3 className="font-bold text-sm">Hỗ trợ & Tương tác</h3>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="hover:bg-white/20 p-1 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                {role === 'supporter' && isSupporterAuth && activeCaseId && (
+                  <>
+                    <button
+                      onClick={() => setShowTransferPopup(true)}
+                      className="hover:bg-white/20 p-1 rounded-full transition-colors"
+                      title="Chuyển quyền hỗ trợ"
+                    >
+                      <ArrowLeftRight className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setShowAddPopup(true)}
+                      className="hover:bg-white/20 p-1 rounded-full transition-colors"
+                      title="Thêm người hỗ trợ"
+                    >
+                      <UserPlus className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="hover:bg-white/20 p-1 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             {(role !== 'none') && (
               <div className="w-full flex justify-between items-center text-[10px]">
@@ -478,6 +703,58 @@ export const ChatPopup: React.FC = () => {
           </div>
 
           {/* Body */}
+          {showTransferPopup && (
+            <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg p-4 w-full max-w-sm shadow-xl">
+                <h4 className="font-bold text-[#3C3633] mb-3">Chuyển quyền hỗ trợ</h4>
+                <p className="text-xs text-gray-500 mb-3">Chọn người trợ lực để chuyển quyền xử lý case này.</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                  {supportersList.filter(s => s.name !== supporterNameInput).map(s => (
+                    <button
+                      key={s.code}
+                      onClick={() => handleTransferRequest(s.name)}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded border border-transparent hover:border-gray-200 transition-colors"
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                  {supportersList.filter(s => s.name !== supporterNameInput).length === 0 && (
+                    <p className="text-xs text-center text-gray-500 py-2">Không có người trợ lực khác.</p>
+                  )}
+                </div>
+                <button onClick={() => setShowTransferPopup(false)} className="w-full py-2 bg-gray-200 text-gray-700 rounded text-sm font-bold hover:bg-gray-300">
+                  Hủy
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showAddPopup && (
+            <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg p-4 w-full max-w-sm shadow-xl">
+                <h4 className="font-bold text-[#3C3633] mb-3">Thêm người hỗ trợ</h4>
+                <p className="text-xs text-gray-500 mb-3">Chọn người trợ lực để cùng hỗ trợ case này.</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                  {supportersList.filter(s => s.name !== supporterNameInput && !(activeCase?.coSupporters || []).includes(s.name)).map(s => (
+                    <button
+                      key={s.code}
+                      onClick={() => handleAddRequest(s.name)}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded border border-transparent hover:border-gray-200 transition-colors"
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                  {supportersList.filter(s => s.name !== supporterNameInput && !(activeCase?.coSupporters || []).includes(s.name)).length === 0 && (
+                    <p className="text-xs text-center text-gray-500 py-2">Không có người trợ lực khác.</p>
+                  )}
+                </div>
+                <button onClick={() => setShowAddPopup(false)} className="w-full py-2 bg-gray-200 text-gray-700 rounded text-sm font-bold hover:bg-gray-300">
+                  Hủy
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto bg-[#F9F9F7] relative flex flex-col">
             {role === 'none' && (
               <div className="p-6 flex flex-col items-center justify-center h-full space-y-6">
@@ -547,10 +824,10 @@ export const ChatPopup: React.FC = () => {
             {role === 'supporter' && isSupporterAuth && !activeCaseId && (
               <div className="p-4 space-y-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Các yêu cầu hỗ trợ</h4>
-                {allCases.filter(c => c.status === 'pending' || ((c.status === 'processing' || c.status === 'completed') && c.supporterName === supporterNameInput)).length === 0 ? (
+                {allCases.filter(filterSupporterCase).length === 0 ? (
                   <p className="text-center text-sm text-gray-500 italic py-8">Không có case hỗ trợ nào đang chờ.</p>
                 ) : (
-                  allCases.filter(c => c.status === 'pending' || ((c.status === 'processing' || c.status === 'completed') && c.supporterName === supporterNameInput)).map(c => (
+                  allCases.filter(filterSupporterCase).map(c => (
                     <div key={c.id} className="bg-white border border-[#E2E2D8] p-4 rounded-lg shadow-sm flex flex-col gap-3">
                       <div className="flex justify-between items-start">
                         <div className="flex-1 pr-2">
@@ -559,8 +836,8 @@ export const ChatPopup: React.FC = () => {
                           <p className="text-xs text-gray-500">Học viên: {c.studentName}</p>
                           <p className="text-[10px] text-gray-400">{new Date(c.createdAt).toLocaleString()}</p>
                         </div>
-                        <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${c.status === 'pending' ? 'bg-red-100 text-red-600' : (c.status === 'processing' ? 'bg-yellow-100 text-yellow-700' : (c.status === 'completed' && c.isPublic ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'))}`}>
-                          {c.status === 'pending' ? 'Chờ' : (c.status === 'processing' ? 'Đang xử lý' : (c.status === 'completed' && c.isPublic ? 'Công khai' : 'Kết thúc'))}
+                        <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${isMyPendingRequest(c) ? 'bg-purple-100 text-purple-700' : (c.status === 'pending' ? 'bg-red-100 text-red-600' : (c.status === 'processing' ? 'bg-yellow-100 text-yellow-700' : (c.status === 'completed' && c.isPublic ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600')))}`}>
+                          {isMyPendingRequest(c) ? 'Chờ xác nhận' : (c.status === 'pending' ? 'Chờ' : (c.status === 'processing' ? 'Đang xử lý' : (c.status === 'completed' && c.isPublic ? 'Công khai' : 'Kết thúc')))}
                         </span>
                       </div>
                       {c.status === 'pending' ? (
@@ -569,7 +846,7 @@ export const ChatPopup: React.FC = () => {
                         </button>
                       ) : (
                         <button onClick={() => setActiveCaseId(c.id)} className="w-full py-2 border border-[#E2E2D8] text-gray-700 text-xs font-bold rounded hover:bg-gray-50">
-                          {c.status === 'processing' ? 'Tiếp tục xử lý' : 'Xem lại'}
+                          {isMyPendingRequest(c) ? 'Xem & Xác nhận' : (c.status === 'processing' ? 'Tiếp tục xử lý' : 'Xem lại')}
                         </button>
                       )}
                     </div>
@@ -629,10 +906,40 @@ export const ChatPopup: React.FC = () => {
                   </div>
                 ) : (
                   messages.map((msg, index) => {
+                    if (msg.senderRole === 'system') {
+                      if (role === 'student') return null; // Hide system msgs from students
+
+                      const isTarget = msg.targetSupporter === supporterNameInput;
+                      const isRequest = msg.type === 'system_transfer_request' || msg.type === 'system_add_request';
+                      const reqType = msg.type === 'system_transfer_request' ? 'transfer' : 'add';
+
+                    
+  return (
+                        <div key={msg.id || index} className="flex justify-center my-4 w-full">
+                          <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex flex-col items-center w-[90%]">
+                            <p className="text-xs text-blue-800 mb-2 text-center">{msg.content}</p>
+                            {isRequest && isTarget && msg.actionStatus === 'pending' && (
+                              <div className="flex gap-2">
+                                <button onClick={() => handleAcceptAction(msg.id!, msg.caseId, reqType, msg.senderName)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700 flex items-center gap-1"><Check className="w-4 h-4"/> Đồng ý</button>
+                                <button onClick={() => handleRejectAction(msg.id!, msg.caseId, reqType, msg.senderName)} className="bg-white border border-gray-300 text-gray-700 px-3 py-1 rounded text-xs font-bold hover:bg-gray-50 flex items-center gap-1"><X className="w-4 h-4"/> Từ chối</button>
+                              </div>
+                            )}
+                            {isRequest && msg.actionStatus === 'accepted' && (
+                              <span className="text-[10px] text-green-600 font-bold">Đã đồng ý</span>
+                            )}
+                            {isRequest && msg.actionStatus === 'rejected' && (
+                              <span className="text-[10px] text-red-600 font-bold">Đã từ chối</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+
                     const isMe = (role === 'supporter' && msg.senderRole === 'supporter' && msg.senderName === supporterNameInput) || 
                                  (role === 'student' && msg.senderRole === 'student' && msg.senderName === studentNameInput);
                     
-                    return (
+                  
+  return (
                       <div key={msg.id || index} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                         <span className="text-[10px] text-gray-500 mb-1 ml-1">
                           {msg.senderName} {msg.senderRole === 'supporter' ? '(Trợ lực viên)' : ''}
@@ -649,7 +956,8 @@ export const ChatPopup: React.FC = () => {
                             <img
                               src={msg.imageUrl}
                               alt="Attached"
-                              className="max-w-full rounded-lg mt-2 max-h-48 object-cover"
+                              className="max-w-full rounded-lg mt-2 max-h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => setViewingImage(msg.imageUrl || null)}
                             />
                           )}
                         </div>
@@ -758,6 +1066,30 @@ export const ChatPopup: React.FC = () => {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Image Viewer Popup */}
+      {viewingImage && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => setViewingImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors bg-black/50 p-2 rounded-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              setViewingImage(null);
+            }}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img 
+            src={viewingImage} 
+            alt="Full size" 
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </>
