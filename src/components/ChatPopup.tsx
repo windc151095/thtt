@@ -1062,7 +1062,11 @@ export const ChatPopup: React.FC = () => {
                 </div>
               ) : (activeCase.status === 'completed' || 
                    (role === 'student' && activeCase.studentName !== studentNameInput) ||
-                   (role === 'supporter' && activeCase.supporterName !== supporterNameInput && !(activeCase.coSupporters || []).includes(supporterNameInput))) ? (
+                   (role === 'supporter' && (
+                     isMyPendingRequest(activeCase) || 
+                     isPastSupporter(activeCase) || 
+                     (activeCase.supporterName !== supporterNameInput && !isCoSupporter(activeCase))
+                   ))) ? (
                 <div className="p-4 text-center text-sm text-gray-500 italic bg-[#F5F5F0]">
                   {activeCase.status === 'completed' ? 'Case hỗ trợ này đã kết thúc.' : 'Bạn chỉ có quyền xem nội dung chat.'}
                 </div>
