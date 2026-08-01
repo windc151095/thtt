@@ -12,6 +12,7 @@ export interface SupportCase {
   createdAt: number;
   supporterName?: string;
   coSupporters?: string[];
+  pastSupporters?: string[];
   transferRequests?: Record<string, {
     type: 'transfer' | 'add';
     from: string;
@@ -404,13 +405,15 @@ export const ChatPopup: React.FC = () => {
     if (!activeCaseId || !activeCase) return;
     try {
       const type = 'transfer';
-      await updateDoc(doc(db, 'support_cases', activeCaseId), {
-        [`transferRequests.${targetSupporterName}`]: {
-          type,
-          from: supporterNameInput,
-          status: 'pending'
+      await setDoc(doc(db, 'support_cases', activeCaseId), {
+        transferRequests: {
+          [targetSupporterName]: {
+            type,
+            from: supporterNameInput,
+            status: 'pending'
+          }
         }
-      });
+      }, { merge: true });
       await addDoc(collection(db, 'support_messages'), {
         caseId: activeCaseId,
         senderName: 'Hệ thống',
@@ -431,13 +434,15 @@ export const ChatPopup: React.FC = () => {
     if (!activeCaseId || !activeCase) return;
     try {
       const type = 'add';
-      await updateDoc(doc(db, 'support_cases', activeCaseId), {
-        [`transferRequests.${targetSupporterName}`]: {
-          type,
-          from: supporterNameInput,
-          status: 'pending'
+      await setDoc(doc(db, 'support_cases', activeCaseId), {
+        transferRequests: {
+          [targetSupporterName]: {
+            type,
+            from: supporterNameInput,
+            status: 'pending'
+          }
         }
-      });
+      }, { merge: true });
       await addDoc(collection(db, 'support_messages'), {
         caseId: activeCaseId,
         senderName: 'Hệ thống',
@@ -461,9 +466,18 @@ export const ChatPopup: React.FC = () => {
       if (caseSnap.exists()) {
         const cData = caseSnap.data();
         const updates: any = {};
-        updates[`transferRequests.${supporterNameInput}.status`] = 'accepted';
+        
+        const newTransferReqs = { ...(cData.transferRequests || {}) };
+        if (newTransferReqs[supporterNameInput]) {
+          newTransferReqs[supporterNameInput].status = 'accepted';
+        }
+        updates.transferRequests = newTransferReqs;
         
         if (type === 'transfer') {
+          const currentPast = cData.pastSupporters || [];
+          if (cData.supporterName && !currentPast.includes(cData.supporterName)) {
+             updates.pastSupporters = [...currentPast, cData.supporterName];
+          }
           updates.supporterName = supporterNameInput;
         } else if (type === 'add') {
           const currentCo = cData.coSupporters || [];
@@ -484,6 +498,7 @@ export const ChatPopup: React.FC = () => {
         senderName: 'Hệ thống',
         senderRole: 'system',
         type: type === 'transfer' ? 'system_transfer_accepted' : 'system_add_accepted',
+        targetSupporter: supporterNameInput,
         content: `${supporterNameInput} đã đồng ý ${type === 'transfer' ? 'nhận quyền' : 'tham gia'} hỗ trợ.`,
         timestamp: Date.now(),
       });
@@ -495,9 +510,15 @@ export const ChatPopup: React.FC = () => {
   const handleRejectAction = async (msgId: string, caseId: string, type: 'transfer' | 'add', fromSupporter: string) => {
     try {
       const caseRef = doc(db, 'support_cases', caseId);
-      await updateDoc(caseRef, {
-        [`transferRequests.${supporterNameInput}.status`]: 'rejected'
-      });
+      const caseSnap = await getDoc(caseRef);
+      if (caseSnap.exists()) {
+        const cData = caseSnap.data();
+        const newTransferReqs = { ...(cData.transferRequests || {}) };
+        if (newTransferReqs[supporterNameInput]) {
+          newTransferReqs[supporterNameInput].status = 'rejected';
+        }
+        await updateDoc(caseRef, { transferRequests: newTransferReqs });
+      }
       
       const msgRef = doc(db, 'support_messages', msgId);
       await updateDoc(msgRef, {
@@ -509,9 +530,12 @@ export const ChatPopup: React.FC = () => {
         senderName: 'Hệ thống',
         senderRole: 'system',
         type: type === 'transfer' ? 'system_transfer_rejected' : 'system_add_rejected',
+        targetSupporter: supporterNameInput,
         content: `Người trợ lực mà bạn yêu cầu (${supporterNameInput}) đã từ chối.`,
         timestamp: Date.now(),
       });
+      
+      setActiveCaseId(null);
     } catch (e) {
       console.error(e);
     }
@@ -624,10 +648,13 @@ export const ChatPopup: React.FC = () => {
   const isCoSupporter = (c: SupportCase) => {
     return c.coSupporters?.includes(supporterNameInput);
   };
+  const isPastSupporter = (c: SupportCase) => {
+    return c.pastSupporters?.includes(supporterNameInput);
+  };
   const filterSupporterCase = (c: SupportCase) => {
     return c.status === 'pending' || 
            ((c.status === 'processing' || c.status === 'completed') && 
-            (c.supporterName === supporterNameInput || isCoSupporter(c) || isMyPendingRequest(c)));
+            (c.supporterName === supporterNameInput || isCoSupporter(c) || isMyPendingRequest(c) || isPastSupporter(c)));
   };
 
   return (
@@ -660,7 +687,7 @@ export const ChatPopup: React.FC = () => {
                 <h3 className="font-bold text-sm">Hỗ trợ & Tương tác</h3>
               </div>
               <div className="flex items-center gap-1">
-                {role === 'supporter' && isSupporterAuth && activeCaseId && (
+                {role === 'supporter' && isSupporterAuth && activeCaseId && activeCase?.supporterName === supporterNameInput && (
                   <>
                     <button
                       onClick={() => setShowTransferPopup(true)}
@@ -846,7 +873,7 @@ export const ChatPopup: React.FC = () => {
                         </button>
                       ) : (
                         <button onClick={() => setActiveCaseId(c.id)} className="w-full py-2 border border-[#E2E2D8] text-gray-700 text-xs font-bold rounded hover:bg-gray-50">
-                          {isMyPendingRequest(c) ? 'Xem & Xác nhận' : (c.status === 'processing' ? 'Tiếp tục xử lý' : 'Xem lại')}
+                          {isMyPendingRequest(c) ? 'Xem & Xác nhận' : ((c.status === 'processing' && !isPastSupporter(c)) ? 'Tiếp tục xử lý' : 'Xem lại')}
                         </button>
                       )}
                     </div>
@@ -907,22 +934,45 @@ export const ChatPopup: React.FC = () => {
                 ) : (
                   messages.map((msg, index) => {
                     if (msg.senderRole === 'system') {
-                      if (role === 'student') return null; // Hide system msgs from students
+                      const isRequest = msg.type === 'system_transfer_request' || msg.type === 'system_add_request';
+                      const isRejected = msg.type === 'system_transfer_rejected' || msg.type === 'system_add_rejected';
+                      
+                      // For students, hide the "request" and "rejected" system messages
+                      if (role === 'student' && (isRequest || isRejected)) return null;
 
                       const isTarget = msg.targetSupporter === supporterNameInput;
-                      const isRequest = msg.type === 'system_transfer_request' || msg.type === 'system_add_request';
                       const reqType = msg.type === 'system_transfer_request' ? 'transfer' : 'add';
+                      
+                      let displayContent = msg.content;
+                      if (msg.type === 'system_transfer_accepted') {
+                        if (role === 'student') {
+                          displayContent = `Yêu cầu của bạn đã được chuyển tiếp cho ${msg.targetSupporter}`;
+                        } else if (role === 'supporter') {
+                          if (isTarget) displayContent = 'Bạn đã đồng ý nhận quyền hỗ trợ.';
+                          else displayContent = `${msg.targetSupporter} đã đồng ý nhận quyền hỗ trợ.`;
+                        }
+                      } else if (msg.type === 'system_add_accepted') {
+                        if (role === 'student') {
+                          displayContent = `${msg.targetSupporter} đã tham gia hỗ trợ.`;
+                        } else if (role === 'supporter') {
+                          if (isTarget) displayContent = 'Bạn đã đồng ý tham gia hỗ trợ.';
+                          else displayContent = `${msg.targetSupporter} đã đồng ý tham gia hỗ trợ.`;
+                        }
+                      }
 
                     
   return (
                         <div key={msg.id || index} className="flex justify-center my-4 w-full">
                           <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex flex-col items-center w-[90%]">
-                            <p className="text-xs text-blue-800 mb-2 text-center">{msg.content}</p>
+                            <p className="text-xs text-blue-800 mb-2 text-center">{displayContent}</p>
                             {isRequest && isTarget && msg.actionStatus === 'pending' && (
                               <div className="flex gap-2">
                                 <button onClick={() => handleAcceptAction(msg.id!, msg.caseId, reqType, msg.senderName)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700 flex items-center gap-1"><Check className="w-4 h-4"/> Đồng ý</button>
                                 <button onClick={() => handleRejectAction(msg.id!, msg.caseId, reqType, msg.senderName)} className="bg-white border border-gray-300 text-gray-700 px-3 py-1 rounded text-xs font-bold hover:bg-gray-50 flex items-center gap-1"><X className="w-4 h-4"/> Từ chối</button>
                               </div>
+                            )}
+                            {isRequest && !isTarget && msg.actionStatus === 'pending' && (
+                              <span className="text-[10px] text-yellow-600 font-bold">Chờ đồng ý...</span>
                             )}
                             {isRequest && msg.actionStatus === 'accepted' && (
                               <span className="text-[10px] text-green-600 font-bold">Đã đồng ý</span>
@@ -977,16 +1027,20 @@ export const ChatPopup: React.FC = () => {
           {activeCaseId && activeCase && (
             <div className="bg-white border-t border-[#E2E2D8] flex flex-col">
               {role === 'supporter' && activeCase.status !== 'completed' && (
-                <div className="p-2 border-b border-[#E2E2D8] bg-[#F9F9F7] grid grid-cols-3 gap-2">
+                <div className={`p-2 border-b border-[#E2E2D8] bg-[#F9F9F7] grid ${activeCase.supporterName === supporterNameInput ? 'grid-cols-3' : 'grid-cols-1'} gap-2`}>
                   <button onClick={handleCloseCaseTemporary} className="w-full py-2 bg-gray-50 text-gray-700 text-[11px] font-bold rounded-lg border border-gray-200 hover:bg-gray-100 flex items-center justify-center">
                     Đóng
                   </button>
-                  <button onClick={handleCompleteCase} className="w-full py-2 bg-blue-50 text-blue-700 text-[11px] font-bold rounded-lg border border-blue-200 hover:bg-blue-100 flex items-center justify-center">
-                    Kết thúc
-                  </button>
-                  <button onClick={handleCompleteAndPublicCase} className="w-full py-2 bg-green-50 text-green-700 text-[11px] font-bold rounded-lg border border-green-200 hover:bg-green-100 flex items-center justify-center">
-                    Công khai
-                  </button>
+                  {activeCase.supporterName === supporterNameInput && (
+                    <>
+                      <button onClick={handleCompleteCase} className="w-full py-2 bg-blue-50 text-blue-700 text-[11px] font-bold rounded-lg border border-blue-200 hover:bg-blue-100 flex items-center justify-center">
+                        Kết thúc
+                      </button>
+                      <button onClick={handleCompleteAndPublicCase} className="w-full py-2 bg-green-50 text-green-700 text-[11px] font-bold rounded-lg border border-green-200 hover:bg-green-100 flex items-center justify-center">
+                        Công khai
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
               
@@ -1006,9 +1060,11 @@ export const ChatPopup: React.FC = () => {
                     <button onClick={submitPublicCase} className="flex-1 py-2 bg-green-600 rounded text-xs font-bold text-white hover:bg-green-700">Xác nhận công khai</button>
                   </div>
                 </div>
-              ) : (activeCase.status === 'completed' || (role === 'student' && activeCase.studentName !== studentNameInput)) ? (
+              ) : (activeCase.status === 'completed' || 
+                   (role === 'student' && activeCase.studentName !== studentNameInput) ||
+                   (role === 'supporter' && activeCase.supporterName !== supporterNameInput && !(activeCase.coSupporters || []).includes(supporterNameInput))) ? (
                 <div className="p-4 text-center text-sm text-gray-500 italic bg-[#F5F5F0]">
-                  Case hỗ trợ này đã kết thúc hoặc ở chế độ chỉ xem.
+                  {activeCase.status === 'completed' ? 'Case hỗ trợ này đã kết thúc.' : 'Bạn chỉ có quyền xem nội dung chat.'}
                 </div>
               ) : (
                 <form onSubmit={handleSendMessage} className="p-4">
