@@ -1039,22 +1039,25 @@ export const ChatPopup: React.FC = () => {
                 {studentActiveCases.length > 0 ? (
                   <div className="mb-6">
                     <p className="text-sm text-yellow-600 mb-2 font-semibold text-center">Bạn đang có case hỗ trợ chưa hoàn thành:</p>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {studentActiveCases.map(c => (
-                        <button
-                          key={c.id}
-                          onClick={() => {
-                            setActiveCaseId(c.id);
-                            localStorage.setItem('chat_activeCaseId', c.id);
-                          }}
-                          className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-colors flex flex-col items-center justify-center px-2"
-                        >
-                          <div className="flex items-center gap-2">
-                            <MessageCircle className="w-5 h-5" />
-                            <span>Tiếp tục case</span>
+                        <div key={c.id} className="bg-white border border-blue-200 p-3 rounded-lg shadow-sm flex flex-col gap-2">
+                          <div>
+                            <p className="font-bold text-sm text-blue-700 mb-1">Mã: {c.id}</p>
+                            <p className="text-[10px] text-gray-500 mb-1">Case: {c.caseName || c.publicTitle || c.id}</p>
+                            {c.supporterName && <p className="text-xs text-gray-600">Trợ lực viên: <span className="font-semibold">{c.supporterName}</span></p>}
+                            <p className="text-[10px] text-gray-400 mt-1">{new Date(c.createdAt).toLocaleString()}</p>
                           </div>
-                          <span className="text-xs opacity-90 mt-1 font-normal line-clamp-1">{c.caseName || c.publicTitle || c.id}</span>
-                        </button>
+                          <button
+                            onClick={() => {
+                              setActiveCaseId(c.id);
+                              localStorage.setItem('chat_activeCaseId', c.id);
+                            }}
+                            className="w-full py-2 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 mt-1"
+                          >
+                            <MessageCircle className="w-4 h-4" /> Tiếp tục
+                          </button>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -1187,7 +1190,13 @@ export const ChatPopup: React.FC = () => {
 
                     
   return (
-                        <div key={msg.id || index} className="flex justify-center my-4 w-full">
+                        <motion.div 
+                          key={msg.id || index} 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex justify-center my-4 w-full"
+                        >
                           <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex flex-col items-center w-[90%]">
                             <p className="text-xs text-blue-800 mb-2 text-center">{displayContent}</p>
                             {isRequest && isTarget && msg.actionStatus === 'pending' && (
@@ -1206,7 +1215,7 @@ export const ChatPopup: React.FC = () => {
                               <span className="text-[10px] text-red-600 font-bold">Đã từ chối</span>
                             )}
                           </div>
-                        </div>
+                        </motion.div>
                       );
                     }
 
@@ -1215,7 +1224,13 @@ export const ChatPopup: React.FC = () => {
                     
                   
   return (
-                      <div key={msg.id || index} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                      <motion.div 
+                        key={msg.id || index} 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                      >
                         <span className="text-[10px] text-gray-500 mb-1 ml-1">
                           {msg.senderName} {msg.senderRole === 'supporter' ? '(Trợ lực viên)' : ''}
                         </span>
@@ -1239,7 +1254,7 @@ export const ChatPopup: React.FC = () => {
                         <span className="text-[10px] text-gray-400 mt-1">
                           {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                      </div>
+                      </motion.div>
                     );
                   })
                 )}
