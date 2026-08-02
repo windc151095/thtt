@@ -86,7 +86,7 @@ export const TemplatePreview = forwardRef<HTMLDivElement, TemplatePreviewProps>(
             <div className="flex flex-col pl-6 pr-6 min-w-0 justify-center h-full">
               <div className="h-[31px] mb-3 flex items-center">
                 <h4 className="font-bold text-[15px] uppercase whitespace-nowrap">
-                  <span style={{ color: headingColor1 }}>BỘ 01. </span><span style={{ color: headingColor2 }}>ĐỜI SỐNG CÁ NHÂN</span>
+                  <span style={{ color: headingColor1 }}>BỘ 01. </span><span style={{ color: headingColor2 }}>ĐỜI SỐNG NỘI SINH</span>
                 </h4>
               </div>
               <div className="font-bold text-[14px] uppercase whitespace-nowrap mb-1">

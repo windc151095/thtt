@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Image as ImageIcon, XCircle, ChevronLeft, CheckCircle, Eye, ArrowLeftRight, UserPlus, Check } from 'lucide-react';
+import {  MessageCircle, X, Send, Image as ImageIcon, XCircle, ChevronLeft, CheckCircle, Eye, ArrowLeftRight, UserPlus, Check , Pencil, ChevronDown, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, setDoc, getDoc, updateDoc, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -9,6 +10,7 @@ export interface SupportCase {
   status: 'pending' | 'processing' | 'completed';
   isPublic: boolean;
   publicTitle?: string;
+  caseName?: string;
   createdAt: number;
   supporterName?: string;
   coSupporters?: string[];
@@ -55,6 +57,12 @@ export const ChatPopup: React.FC = () => {
     allCasesRef.current = allCases;
   }, [allCases]);
   const [publicCases, setPublicCases] = useState<SupportCase[]>([]);
+  const [studentActiveCases, setStudentActiveCases] = useState<SupportCase[]>([]);
+  const [studentCompletedCases, setStudentCompletedCases] = useState<SupportCase[]>([]);
+  const [showNewCasePrompt, setShowNewCasePrompt] = useState(false);
+  const [newCaseNameInput, setNewCaseNameInput] = useState('');
+  const [isCompletedCasesOpen, setIsCompletedCasesOpen] = useState(false);
+  const [isPublicCasesOpen, setIsPublicCasesOpen] = useState(false);
   
   // Messages states
   const [messages, setMessages] = useState<SupportMessage[]>([]);
@@ -67,6 +75,8 @@ export const ChatPopup: React.FC = () => {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [showTransferPopup, setShowTransferPopup] = useState(false);
   const [showAddPopup, setShowAddPopup] = useState(false);
+  const [showEditNamePopup, setShowEditNamePopup] = useState(false);
+  const [editCaseNameInput, setEditCaseNameInput] = useState('');
   const [supportersList, setSupportersList] = useState<{name: string, code: string}[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -205,6 +215,30 @@ export const ChatPopup: React.FC = () => {
     }
   }, [role, isSupporterAuth]);
 
+  // Fetch active and completed cases for current student
+  useEffect(() => {
+    if (role === 'student' && isStudentAuth) {
+      const q = query(collection(db, 'support_cases'), where('studentName', '==', studentNameInput));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const active: SupportCase[] = [];
+        const completed: SupportCase[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data() as SupportCase;
+          if (data.status === 'pending' || data.status === 'processing') {
+            active.push({ id: doc.id, ...data });
+          } else if (data.status === 'completed') {
+            completed.push({ id: doc.id, ...data });
+          }
+        });
+        // Sort completed cases by createdAt descending
+        completed.sort((a, b) => b.createdAt - a.createdAt);
+        setStudentActiveCases(active);
+        setStudentCompletedCases(completed);
+      });
+      return () => unsubscribe();
+    }
+  }, [role, isStudentAuth, studentNameInput]);
+
   // Fetch public cases for student
   useEffect(() => {
     if (role === 'student' && !activeCaseId) {
@@ -300,7 +334,10 @@ export const ChatPopup: React.FC = () => {
     }
   };
 
-  const handleCreateCase = async () => {
+  const handleCreateCaseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCaseNameInput.trim()) return;
+
     try {
       const now = new Date();
       const dd = String(now.getDate()).padStart(2, '0');
@@ -332,6 +369,7 @@ export const ChatPopup: React.FC = () => {
       const newCase: SupportCase = {
         id: newCaseId,
         studentName: studentNameInput.trim(),
+        caseName: newCaseNameInput.trim(),
         status: 'pending',
         isPublic: false,
         createdAt: Date.now()
@@ -340,6 +378,8 @@ export const ChatPopup: React.FC = () => {
       await setDoc(doc(db, 'support_cases', newCaseId), newCase);
       setActiveCaseId(newCaseId);
       localStorage.setItem('chat_activeCaseId', newCaseId);
+      setShowNewCasePrompt(false);
+      setNewCaseNameInput('');
     } catch (error) {
       console.error(error);
       alert('Có lỗi xảy ra khi tạo case.');
@@ -425,6 +465,19 @@ export const ChatPopup: React.FC = () => {
         timestamp: Date.now(),
       });
       setShowTransferPopup(false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSaveCaseName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeCaseId) return;
+    try {
+      await updateDoc(doc(db, 'support_cases', activeCaseId), {
+        caseName: editCaseNameInput.trim()
+      });
+      setShowEditNamePopup(false);
     } catch (e) {
       console.error(e);
     }
@@ -679,16 +732,30 @@ export const ChatPopup: React.FC = () => {
           <div className="p-4 bg-[#3C3633] text-white flex flex-col justify-between items-start">
             <div className="w-full flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                {activeCaseId && (
+                {activeCaseId ? (
                   <button onClick={() => setActiveCaseId(null)} className="hover:bg-white/20 p-1 rounded-full transition-colors">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                )}
-                <h3 className="font-bold text-sm">Hỗ trợ & Tương tác</h3>
+                ) : role !== 'none' ? (
+                  <button onClick={() => { setRole('none'); localStorage.removeItem('chat_role'); }} className="hover:bg-white/20 p-1 rounded-full transition-colors">
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                ) : null}
+                <h3 className="font-bold text-sm">{activeCaseId ? activeCaseId.replace('CASE-', 'CASE - ') : 'Hỗ trợ & Tương tác'}</h3>
               </div>
               <div className="flex items-center gap-1">
                 {role === 'supporter' && isSupporterAuth && activeCaseId && activeCase?.supporterName === supporterNameInput && (
                   <>
+                    <button
+                      onClick={() => {
+                        setEditCaseNameInput(activeCase?.caseName || activeCase?.id || '');
+                        setShowEditNamePopup(true);
+                      }}
+                      className="hover:bg-white/20 p-1 rounded-full transition-colors"
+                      title="Sửa tên case"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={() => setShowTransferPopup(true)}
                       className="hover:bg-white/20 p-1 rounded-full transition-colors"
@@ -713,23 +780,71 @@ export const ChatPopup: React.FC = () => {
                 </button>
               </div>
             </div>
-            {(role !== 'none') && (
+            {((role === 'supporter' && isSupporterAuth) || (role === 'student' && isStudentAuth)) && (
               <div className="w-full flex justify-between items-center text-[10px]">
-                <span className="opacity-80">Vai trò: {role === 'supporter' ? 'Người trợ lực' : 'Học viên'}</span>
-                <button onClick={handleLogout} className="underline hover:text-red-300">Đăng xuất</button>
+                {activeCaseId && activeCase ? (
+                  <div className="flex flex-wrap items-center gap-1 opacity-90">
+                    <span className="mr-1">Với:</span>
+                    {[
+                      ...(activeCase.studentName && activeCase.studentName !== (role === 'supporter' ? supporterNameInput : studentNameInput) ? [{ name: activeCase.studentName, type: 'student' }] : []),
+                      ...Array.from(new Set([activeCase.supporterName, ...(activeCase.coSupporters || [])]))
+                        .filter(Boolean)
+                        .filter(n => n !== (role === 'supporter' ? supporterNameInput : studentNameInput))
+                        .map(n => ({ name: n, type: 'supporter' }))
+                    ].map((p, idx, arr) => (
+                      <span key={idx} className={p.type === 'student' ? 'text-blue-300 font-semibold' : 'text-yellow-300 font-semibold'}>
+                        {p.name as string}{idx < arr.length - 1 ? ', ' : ''}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="opacity-80">{role === 'supporter' ? supporterNameInput : studentNameInput} - {role === 'supporter' ? 'Trợ lực viên' : 'Học viên'}</span>
+                )}
+                <div className="flex items-center gap-2">
+                  {activeCase && (
+                    <span className={`font-semibold ${activeCase.status === 'completed' ? 'text-green-300' : (activeCase.status === 'processing' ? 'text-yellow-300' : 'text-gray-300')}`}>
+                      {activeCase.status === 'pending' ? 'Chờ xử lý' : (activeCase.status === 'processing' ? 'Đang xử lý' : 'Đã hoàn thành')}
+                    </span>
+                  )}
+                  {!activeCaseId && (
+                    <button onClick={handleLogout} className="underline hover:text-red-300">Đăng xuất</button>
+                  )}
+                </div>
               </div>
             )}
             {activeCase && (
-               <div className="w-full text-xs mt-1 py-1 px-2 bg-white/10 rounded font-semibold flex justify-between">
-                 <span>Case: {activeCase.id}</span>
-                 <span className={activeCase.status === 'completed' ? 'text-green-300' : (activeCase.status === 'processing' ? 'text-yellow-300' : 'text-gray-300')}>
-                   {activeCase.status === 'pending' ? 'Chờ xử lý' : (activeCase.status === 'processing' ? 'Đang xử lý' : 'Đã hoàn thành')}
-                 </span>
+               <div className="w-full text-xs mt-1 py-1 px-2 bg-white/10 rounded font-semibold">
+                 <span>Case: {activeCase.caseName || activeCase.id}</span>
                </div>
             )}
           </div>
 
           {/* Body */}
+          {showEditNamePopup && (
+            <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg p-4 w-full max-w-sm shadow-xl">
+                <h4 className="font-bold text-[#3C3633] mb-3">Đổi tên case</h4>
+                <form onSubmit={handleSaveCaseName}>
+                  <input
+                    type="text"
+                    value={editCaseNameInput}
+                    onChange={(e) => setEditCaseNameInput(e.target.value)}
+                    placeholder="Nhập tên case..."
+                    className="w-full p-2 border border-gray-300 rounded text-sm mb-4 focus:outline-none focus:border-gray-500"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setShowEditNamePopup(false)} className="flex-1 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200">
+                      Hủy
+                    </button>
+                    <button type="submit" className="flex-1 py-2 bg-[#5A5A40] text-white text-xs font-bold rounded hover:bg-[#4A4A35]">
+                      Lưu
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
           {showTransferPopup && (
             <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
               <div className="bg-white rounded-lg p-4 w-full max-w-sm shadow-xl">
@@ -783,8 +898,16 @@ export const ChatPopup: React.FC = () => {
           )}
 
           <div className="flex-1 overflow-y-auto bg-[#F9F9F7] relative flex flex-col">
+            <AnimatePresence mode="wait">
             {role === 'none' && (
-              <div className="p-6 flex flex-col items-center justify-center h-full space-y-6">
+              <motion.div 
+                key="role-none"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                className="p-6 flex flex-col items-center justify-center h-full space-y-6"
+              >
                 <p className="text-gray-600 font-medium">Bạn là người...</p>
                 <button
                   onClick={() => setRole('supporter')}
@@ -798,11 +921,18 @@ export const ChatPopup: React.FC = () => {
                 >
                   Học viên Sống Sáng Suốt
                 </button>
-              </div>
+              </motion.div>
             )}
 
             {role === 'supporter' && !isSupporterAuth && (
-              <form onSubmit={handleSupporterLogin} className="p-6 flex flex-col justify-center h-full space-y-4">
+              <motion.form 
+                key="supporter-auth"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                onSubmit={handleSupporterLogin} className="p-6 flex flex-col justify-center h-full space-y-4"
+              >
                 <h4 className="font-bold text-center text-[#3C3633]">Xác thực Người trợ lực</h4>
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">Mã tiếp nhận hỗ trợ</label>
@@ -821,11 +951,18 @@ export const ChatPopup: React.FC = () => {
                 >
                   Xác nhận
                 </button>
-              </form>
+              </motion.form>
             )}
 
             {role === 'student' && !isStudentAuth && (
-              <form onSubmit={handleStudentLogin} className="p-6 flex flex-col justify-center h-full space-y-4">
+              <motion.form 
+                key="student-auth"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                onSubmit={handleStudentLogin} className="p-6 flex flex-col justify-center h-full space-y-4"
+              >
                 <h4 className="font-bold text-center text-[#3C3633]">Bắt đầu hỗ trợ</h4>
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">Tên của bạn</label>
@@ -844,12 +981,19 @@ export const ChatPopup: React.FC = () => {
                 >
                   Tiếp tục
                 </button>
-              </form>
+              </motion.form>
             )}
 
             {/* List Cases for Supporter */}
             {role === 'supporter' && isSupporterAuth && !activeCaseId && (
-              <div className="p-4 space-y-4">
+              <motion.div 
+                key="supporter-dashboard"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                className="p-4 space-y-4"
+              >
                 <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Các yêu cầu hỗ trợ</h4>
                 {allCases.filter(filterSupporterCase).length === 0 ? (
                   <p className="text-center text-sm text-gray-500 italic py-8">Không có case hỗ trợ nào đang chờ.</p>
@@ -858,8 +1002,8 @@ export const ChatPopup: React.FC = () => {
                     <div key={c.id} className="bg-white border border-[#E2E2D8] p-4 rounded-lg shadow-sm flex flex-col gap-3">
                       <div className="flex justify-between items-start">
                         <div className="flex-1 pr-2">
-                          <p className="font-bold text-sm text-[#3C3633] mb-1">{c.publicTitle || c.id}</p>
-                          <p className="text-[10px] text-gray-500 mb-1">Mã: {c.id}</p>
+                          <p className="font-bold text-sm text-[#3C3633] mb-1">Mã: {c.id}</p>
+                          <p className="text-[10px] text-gray-500 mb-1">Case: {c.caseName || c.publicTitle || c.id}</p>
                           <p className="text-xs text-gray-500">Học viên: {c.studentName}</p>
                           <p className="text-[10px] text-gray-400">{new Date(c.createdAt).toLocaleString()}</p>
                         </div>
@@ -879,54 +1023,135 @@ export const ChatPopup: React.FC = () => {
                     </div>
                   ))
                 )}
-              </div>
+              </motion.div>
             )}
 
             {/* Dashboard for Student */}
             {role === 'student' && isStudentAuth && !activeCaseId && (
-              <div className="p-4 flex flex-col h-full">
-                {localStorage.getItem('chat_activeCaseId') ? (
-                  <button
-                    onClick={() => setActiveCaseId(localStorage.getItem('chat_activeCaseId'))}
-                    className="w-full py-4 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-colors mb-4 flex items-center justify-center gap-2"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    Quay lại case của bạn
-                  </button>
-                ) : null}
-                <button
-                  onClick={handleCreateCase}
-                  className="w-full py-4 bg-[#3C3633] text-white rounded-lg font-bold shadow-md hover:bg-[#2A2523] transition-colors mb-6 flex items-center justify-center gap-2"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  Bắt đầu case hỗ trợ mới
-                </button>
-                
-                <div className="flex-1 overflow-y-auto">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-2">
-                    <Eye className="w-4 h-4" /> Case hỗ trợ cộng đồng
-                  </h4>
-                  {publicCases.length === 0 ? (
-                    <p className="text-center text-sm text-gray-500 italic py-8">Chưa có case nào được công khai.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {publicCases.map(c => (
-                        <div key={c.id} onClick={() => setActiveCaseId(c.id)} className="bg-white border border-[#E2E2D8] p-3 rounded-lg shadow-sm cursor-pointer hover:border-[#5A5A40] transition-colors">
-                          <p className="font-bold text-sm text-[#3C3633] mb-1">{c.publicTitle || c.id}</p>
-                          <p className="text-[10px] text-gray-500 mb-1">Mã: {c.id}</p>
-                          <p className="text-xs text-gray-600">Trợ lực viên: <span className="font-semibold">{c.supporterName}</span></p>
-                          <p className="text-[10px] text-gray-400 mt-1">{new Date(c.createdAt).toLocaleDateString()}</p>
-                        </div>
+              <motion.div 
+                key="student-dashboard"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                className="p-4 flex flex-col h-full"
+              >
+                {studentActiveCases.length > 0 ? (
+                  <div className="mb-6">
+                    <p className="text-sm text-yellow-600 mb-2 font-semibold text-center">Bạn đang có case hỗ trợ chưa hoàn thành:</p>
+                    <div className="space-y-2">
+                      {studentActiveCases.map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            setActiveCaseId(c.id);
+                            localStorage.setItem('chat_activeCaseId', c.id);
+                          }}
+                          className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-colors flex flex-col items-center justify-center px-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <MessageCircle className="w-5 h-5" />
+                            <span>Tiếp tục case</span>
+                          </div>
+                          <span className="text-xs opacity-90 mt-1 font-normal line-clamp-1">{c.caseName || c.publicTitle || c.id}</span>
+                        </button>
                       ))}
                     </div>
+                  </div>
+                ) : showNewCasePrompt ? (
+                  <form onSubmit={handleCreateCaseSubmit} className="mb-6 bg-[#F9F9F7] p-4 rounded-lg border border-[#E2E2D8]">
+                    <h4 className="text-sm font-bold text-[#3C3633] mb-2">Nhập tên case cần hỗ trợ</h4>
+                    <input
+                      type="text"
+                      value={newCaseNameInput}
+                      onChange={(e) => setNewCaseNameInput(e.target.value)}
+                      placeholder="VD: Khó khăn khi..."
+                      className="w-full p-2 border border-[#E2E2D8] rounded text-sm mb-3 focus:outline-none focus:border-[#5A5A40]"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setShowNewCasePrompt(false)} className="flex-1 py-2 bg-white border border-gray-300 rounded text-xs font-bold text-gray-600 hover:bg-gray-50">Hủy</button>
+                      <button type="submit" className="flex-1 py-2 bg-[#3C3633] text-white rounded text-xs font-bold hover:bg-[#2A2523]">Tạo mới</button>
+                    </div>
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => setShowNewCasePrompt(true)}
+                    className="w-full py-4 bg-[#3C3633] text-white rounded-lg font-bold shadow-md hover:bg-[#2A2523] transition-colors mb-6 flex items-center justify-center gap-2"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    Bắt đầu case hỗ trợ mới
+                  </button>
+                )}
+                
+                <div className="flex-1 overflow-y-auto mt-4">
+                  {studentCompletedCases.length > 0 && (
+                    <div className="mb-6">
+                      <h4 
+                        className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center justify-between cursor-pointer hover:text-gray-700 transition-colors"
+                        onClick={() => setIsCompletedCasesOpen(!isCompletedCasesOpen)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4" /> Case của bạn đã kết thúc
+                        </div>
+                        {isCompletedCasesOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </h4>
+                      {isCompletedCasesOpen && (
+                        <div className="space-y-3">
+                          {studentCompletedCases.map(c => (
+                            <div key={c.id} onClick={() => setActiveCaseId(c.id)} className="bg-white border border-gray-200 p-3 rounded-lg shadow-sm cursor-pointer hover:border-gray-400 transition-colors opacity-80">
+                              <p className="font-bold text-sm text-gray-700 mb-1">Mã: {c.id}</p>
+                              <p className="text-[10px] text-gray-500 mb-1">Case: {c.caseName || c.publicTitle || c.id}</p>
+                              {c.supporterName && <p className="text-xs text-gray-600">Trợ lực viên: <span className="font-semibold">{c.supporterName}</span></p>}
+                              <p className="text-[10px] text-gray-400 mt-1">{new Date(c.createdAt).toLocaleString()}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
+
+                  <div className="border-t border-[#E2E2D8] pt-4">
+                    <h4 
+                      className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center justify-between cursor-pointer hover:text-gray-700 transition-colors"
+                      onClick={() => setIsPublicCasesOpen(!isPublicCasesOpen)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Eye className="w-4 h-4" /> Xem case hỗ trợ công khai đã xử lý
+                      </div>
+                      {isPublicCasesOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </h4>
+                    {isPublicCasesOpen && (
+                      publicCases.length === 0 ? (
+                        <p className="text-center text-sm text-gray-500 italic py-8">Chưa có case nào được công khai.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {publicCases.map(c => (
+                            <div key={c.id} onClick={() => setActiveCaseId(c.id)} className="bg-white border border-[#E2E2D8] p-3 rounded-lg shadow-sm cursor-pointer hover:border-[#5A5A40] transition-colors">
+                              <p className="font-bold text-sm text-[#3C3633] mb-1">Mã: {c.id}</p>
+                              <p className="text-[10px] text-gray-500 mb-1">Case: {c.caseName || c.publicTitle || c.id}</p>
+                              <p className="text-xs text-gray-600">Trợ lực viên: <span className="font-semibold">{c.supporterName}</span></p>
+                              <p className="text-[10px] text-gray-400 mt-1">{new Date(c.createdAt).toLocaleString()}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    )}
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* Chat View */}
             {activeCaseId && activeCase && (
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <motion.div 
+                key="chat-view"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 overflow-y-auto p-4 space-y-4"
+              >
                 {messages.length === 0 ? (
                   <div className="text-center text-sm text-gray-500 italic py-8">
                     Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện.
@@ -1019,8 +1244,9 @@ export const ChatPopup: React.FC = () => {
                   })
                 )}
                 <div ref={messagesEndRef} />
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
           </div>
 
           {/* Footer Input */}
@@ -1041,6 +1267,16 @@ export const ChatPopup: React.FC = () => {
                       </button>
                     </>
                   )}
+                </div>
+              )}
+              {role === 'student' && activeCase.studentName === studentNameInput && activeCase.status !== 'completed' && (
+                <div className="p-2 border-b border-[#E2E2D8] bg-[#F9F9F7] grid grid-cols-2 gap-2">
+                  <button onClick={handleCloseCaseTemporary} className="w-full py-2 bg-gray-50 text-gray-700 text-[11px] font-bold rounded-lg border border-gray-200 hover:bg-gray-100 flex items-center justify-center">
+                    Đóng
+                  </button>
+                  <button onClick={handleCompleteCase} className="w-full py-2 bg-blue-50 text-blue-700 text-[11px] font-bold rounded-lg border border-blue-200 hover:bg-blue-100 flex items-center justify-center">
+                    Kết thúc case
+                  </button>
                 </div>
               )}
               
@@ -1068,7 +1304,11 @@ export const ChatPopup: React.FC = () => {
                      (activeCase.supporterName !== supporterNameInput && !isCoSupporter(activeCase))
                    ))) ? (
                 <div className="p-4 text-center text-sm text-gray-500 italic bg-[#F5F5F0]">
-                  {activeCase.status === 'completed' ? 'Case hỗ trợ này đã kết thúc.' : 'Bạn chỉ có quyền xem nội dung chat.'}
+                  {activeCase.status === 'completed' 
+                    ? 'Case hỗ trợ này đã kết thúc.' 
+                    : isMyPendingRequest(activeCase)
+                      ? 'Vui lòng xác nhận yêu cầu (Đồng ý/Từ chối) ở tin nhắn trên để có thể trò chuyện.'
+                      : 'Bạn chỉ có quyền xem nội dung chat.'}
                 </div>
               ) : (
                 <form onSubmit={handleSendMessage} className="p-4">
